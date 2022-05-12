@@ -9,18 +9,42 @@
 
 import os
 import sys
-import collections
+from collections import Counter
 import re
+import platform
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 basedir = os.path.dirname(__file__)
-
 try:
     from ctypes import windll  # Only exists on Windows.
     myappid = 'mycompany.myproduct.subproduct.version'
     windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 except ImportError:
     pass
+
+"""
+    TODO LIST:
+    * Regarding same name but different case usage: 
+        * If the folder doesn't exist, choose which version to use
+            * Store each varient in a list in a dictionary (eg {apple: [Apple, apple]})
+        * If the file does exist, find all instances of the same name (maybe turn them into lower case), and make duplicate folders using the original folder name
+    * Pop up boxes to handle:
+        * Faulty names
+        * Same name (choose which one to use) 
+"""
+reservedCharacters = []
+subfolderDividers = []
+reservedFileNames = []
+if platform.system() == "Windows":
+    reservedCharacters = ["<", ">", ":", "|", "?", "*"] #Note: "\" and "/" are also reserved, but are used to create subfolders.
+    subfolderDividers = ["\\", "/"]
+    reservedFileNames = [
+        "CON", 
+        "PRN", 
+        "AUX", "NUL", 
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", 
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    ]
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -50,7 +74,7 @@ class Ui_MainWindow(object):
         icon1.addPixmap(QtGui.QPixmap(os.path.join(basedir, 'images', "folder.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.sourceButton.setIcon(icon1)
         self.sourceButton.setObjectName("sourceButton")
-        self.sourceButton.clicked.connect(self.choose_directory)
+        self.sourceButton.clicked.connect(self.chooseDirectory)
 
         self.directoryTextbox = QtWidgets.QLineEdit(self.centralwidget)
         self.directoryTextbox.setGeometry(QtCore.QRect(72, 15, 280, 30))
@@ -64,7 +88,7 @@ class Ui_MainWindow(object):
         self.createButton = QtWidgets.QPushButton(self.centralwidget)
         self.createButton.setGeometry(QtCore.QRect(274, 455, 111, 31))
         self.createButton.setObjectName("createButton")
-        self.createButton.clicked.connect(self.create_folders)
+        self.createButton.clicked.connect(self.createFolders)
 
         self.directoryLabel = QtWidgets.QLabel(self.centralwidget)
         self.directoryLabel.setGeometry(QtCore.QRect(20, 23, 47, 13))
@@ -113,7 +137,7 @@ class Ui_MainWindow(object):
         self.actionSaveNameListFile.setText(_translate("MainWindow", "Save name list file"))
         self.actionSaveNameListFile.setShortcut(_translate("MainWindow", "Ctrl+S"))
 
-    def choose_directory(self):
+    def chooseDirectory(self):
         previousDirectoryTextCopy = self.directoryTextbox.text()
         folder = QtWidgets.QFileDialog.getExistingDirectory(
             MainWindow, 
@@ -124,7 +148,7 @@ class Ui_MainWindow(object):
         folder = folder.replace("/", "\\")
         self.directoryTextbox.setText(folder)
 
-    def create_folders(self):
+    def createFolders(self):
         #print("Current directory content", os.listdir())
         self.directory = self.directoryTextbox.text()
         if self.directory == "":
@@ -134,33 +158,81 @@ class Ui_MainWindow(object):
                 "Please provide a source folder",
                 QtWidgets.QMessageBox.Yes
             )
-        rawFolderNames = self.folderNames.toPlainText()
-        refinedNamesList = [
-            x.strip() 
-            for x in rawFolderNames.split("\n") 
+            return
+        rawNamesList = self.folderNames.toPlainText()
+        despacedNamesList = [
+            x.strip()
+            for x in rawNamesList.split("\n") 
             if x.strip()
         ]
-        print("refinedNamesList:", refinedNamesList)
-        refinedNamesSet = set(refinedNamesList)
-        counterList = collections.Counter(refinedNamesList)
-        print("refinedNamesSet:", refinedNamesSet)
+        print(despacedNamesList)
+        validNamesList = []
+        subfoldersList = []
+        #faultyNamesList = []
+        for i in range(len(despacedNamesList)): #Windows filename properties
+            isSublist = False
+            currentName = despacedNamesList[i]
+            print(currentName)
+
+            if currentName[0] in ["/"] or currentName[-1] in ["/"]:
+                print("With:", currentName)
+                currentName = currentName.strip("/")
+                print("Without:", currentName)
+            if currentName[0] in ["\\"] or currentName[-1] in ["\\"]:
+                print("With:", currentName)
+                currentName = currentName.strip("\\")
+                print("Without:", currentName)
+
+            #Note: Maybe handle cancelations
+            if any(char in currentName for char in subfolderDividers):
+                isSublist = True
+                print("\t\tBefore splitting:", currentName)
+                subfolders = re.split("[/\\\\]+", currentName)
+                currentName = subfolders[0]
+
+            if currentName[-1] == ".":
+                print("With:", currentName)
+                currentName = currentName.rstrip(".")
+                print("Without:", currentName)
+            
+            #NOTE: Collect faulty names
+            if currentName.upper() in reservedFileNames: #don't add them
+                print("Reserved File Name:", currentName)
+                continue
+            if any(char in currentName for char in reservedCharacters):
+                print("Contains reserved characters:", currentName)
+                continue
+            
+            if isSublist:
+                subfolders[0] = currentName
+                validNamesList.append(currentName)
+                subfoldersList.append(subfolders)
+            else:
+                validNamesList.append(currentName)
+                subfoldersList.append([currentName])
+        #print("faultyNamesList:", faultyNamesList)
+        print("validNamesList:", validNamesList)
+        print("subfoldersList:", subfoldersList)
+        validNamesSet = set(validNamesList)
+        counterList = Counter(validNamesList)
+        print("validNamesSet:", validNamesSet)
         print("counterList:", counterList)
         for item in os.listdir(self.directory):
             if (
-                item in refinedNamesSet 
+                item in validNamesSet 
                 and not self.duplicateFoldersCheckbox.isChecked()
             ):
-                refinedNamesSet.remove(item)
+                validNamesSet.remove(item)
         cumulativeList = []
         for item in os.listdir(self.directory):
             parser = re.findall('[(]Copy [0-9]+[)]', item)
             if (parser != []):
                 cumulativeList.append(item.replace(parser[-1], "").strip())
-        cumulativeCounterList = collections.Counter(cumulativeList)
+        cumulativeCounterList = Counter(cumulativeList)
         print("cumulativeList:", cumulativeList)
         print("cumulativeCounterList:", cumulativeCounterList)
         finalNamesList = []
-        for item in refinedNamesSet:
+        for item in validNamesSet:
             if(
                 (
                     self.duplicateFoldersCheckbox.isChecked() 
@@ -176,10 +248,24 @@ class Ui_MainWindow(object):
                         finalNamesList.append(item + " " + "(Copy " + str(i + cumulativeCounterList[item]) + ")")
             else:
                 finalNamesList.append(item)
+        
+        if self.duplicateFoldersCheckbox.isChecked():
+            for i in range(len(subfoldersList)):
+                subfoldersList[i][0] = finalNamesList[i]
+
         print("finalNamesList:", finalNamesList)
-        for name in finalNamesList:
-            os.mkdir(self.directory + "\\" + name)
-        #print("~~~Complete!")
+        print("subfoldersList", subfoldersList)
+        for i in range(len(finalNamesList)):
+            if (
+                finalNamesList[i] in os.listdir(self.directory) 
+                and not self.duplicateFoldersCheckbox.isChecked()
+            ):
+                return
+            elif len(subfoldersList[i]) > 1:
+                os.makedirs(self.directory + "\\" + "\\".join(subfoldersList[i]))
+            else: 
+                os.mkdir(self.directory + "\\" + finalNamesList[i])
+        print("~~~Complete!")
 
     def openNameListFile(self):
         #print("open")
@@ -214,7 +300,7 @@ class Ui_MainWindow(object):
     
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    app.setWindowIcon(QtGui.QIcon(os.path.join(basedir, 'images', 'xor_icon.ico')))
+    app.setWindowIcon(QtGui.QIcon(os.path.join(basedir, 'images', 'app_logo.ico')))
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
