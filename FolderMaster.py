@@ -9,7 +9,7 @@
 
 import os
 import sys
-from collections import Counter
+import collections
 import re
 import platform
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -47,6 +47,33 @@ if platform.system() == "Windows":
     ]
 
 class Ui_MainWindow(object):
+    def openWindow(self, namecases):
+        self.window = QtWidgets.QMainWindow()
+        self.ui = Ui_CaseStyleWindow(namecases)
+        self.ui.setupUi(self.window)
+        self.window.show()
+
+    def openWindow2(self, namecases):
+        self.window = QtWidgets.QDialog()
+        self.ui = Ui_CaseStyleWindow(namecases)
+        self.ui.setupUi(self.window)
+        self.window.exec_()
+        """
+        app = QtWidgets.QApplication(sys.argv)
+        CaseStyleWindow = QtWidgets.QDialog()
+        ui = Ui_CaseStyleWindow(namecases)
+        ui.setupUi(CaseStyleWindow)
+        CaseStyleWindow.exec_()
+        #sys.exit(app.exec_())
+        """
+
+    def showDialog():
+        d = QtWidgets.QDialog()
+        b1 = QtWidgets.QPushButton("ok",d)
+        b1.move(50,50)
+        d.setWindowTitle("Dialog")
+        d.exec_()
+
     def setupUi(self, MainWindow):
         self.directory = str(os.getcwd()[0].upper()) + str(os.getcwd()[1:])
 
@@ -152,11 +179,11 @@ class Ui_MainWindow(object):
         #print("Current directory content", os.listdir())
         self.directory = self.directoryTextbox.text()
         if self.directory == "":
-            QtWidgets.QMessageBox.question(
+            dialog = QtWidgets.QMessageBox.question(
                 MainWindow, 
                 'No Source Folder',
                 "Please provide a source folder",
-                QtWidgets.QMessageBox.Yes
+                QtWidgets.QMessageBox.Ok
             )
             return
         rawNamesList = self.folderNames.toPlainText()
@@ -165,44 +192,51 @@ class Ui_MainWindow(object):
             for x in rawNamesList.split("\n") 
             if x.strip()
         ]
-        print(despacedNamesList)
+        #print(despacedNamesList)
         validNamesList = []
         subfoldersList = []
         #faultyNamesList = []
+        letterCasesDict = {}
         for i in range(len(despacedNamesList)): #Windows filename properties
             isSublist = False
             currentName = despacedNamesList[i]
-            print(currentName)
+            #print(currentName)
 
             if currentName[0] in ["/"] or currentName[-1] in ["/"]:
-                print("With:", currentName)
+                #print("With:", currentName)
                 currentName = currentName.strip("/")
-                print("Without:", currentName)
+                #print("Without:", currentName)
             if currentName[0] in ["\\"] or currentName[-1] in ["\\"]:
-                print("With:", currentName)
+                #print("With:", currentName)
                 currentName = currentName.strip("\\")
-                print("Without:", currentName)
+                #print("Without:", currentName)
 
             #Note: Maybe handle cancelations
             if any(char in currentName for char in subfolderDividers):
                 isSublist = True
-                print("\t\tBefore splitting:", currentName)
+                #print("\t\tBefore splitting:", currentName)
                 subfolders = re.split("[/\\\\]+", currentName)
                 currentName = subfolders[0]
 
             if currentName[-1] == ".":
-                print("With:", currentName)
+                #print("With:", currentName)
                 currentName = currentName.rstrip(".")
-                print("Without:", currentName)
+                #print("Without:", currentName)
             
             #NOTE: Collect faulty names
             if currentName.upper() in reservedFileNames: #don't add them
-                print("Reserved File Name:", currentName)
+                #print("Reserved File Name:", currentName)
                 continue
             if any(char in currentName for char in reservedCharacters):
-                print("Contains reserved characters:", currentName)
+                #print("Contains reserved characters:", currentName)
                 continue
             
+            if currentName.lower() not in letterCasesDict:
+                letterCasesDict[currentName.lower()] = set()
+                letterCasesDict[currentName.lower()].add(currentName)
+            else:
+                letterCasesDict[currentName.lower()].add(currentName)
+
             if isSublist:
                 subfolders[0] = currentName
                 validNamesList.append(currentName)
@@ -210,13 +244,48 @@ class Ui_MainWindow(object):
             else:
                 validNamesList.append(currentName)
                 subfoldersList.append([currentName])
+
+        print("validNamesList before:", validNamesList)
+        for key in letterCasesDict.keys():
+            validNamesList = list(filter(lambda a: a.lower() != key, validNamesList))
+        print("validNamesList after:", validNamesList)
+
+        print("letterCasesDict:", letterCasesDict)
+        orderedLetterCasesDict = collections.OrderedDict(sorted(letterCasesDict.items()))
+        print("orderedLetterCasesDict:", orderedLetterCasesDict)
         #print("faultyNamesList:", faultyNamesList)
         print("validNamesList:", validNamesList)
         print("subfoldersList:", subfoldersList)
         validNamesSet = set(validNamesList)
-        counterList = Counter(validNamesList)
-        print("validNamesSet:", validNamesSet)
-        print("counterList:", counterList)
+        counterList = collections.Counter(validNamesList)
+        #print("validNamesSet:", validNamesSet)
+        #print("counterList:", counterList)
+
+        for key in orderedLetterCasesDict.keys():
+            print(key)
+            namecase = orderedLetterCasesDict.get(key)
+            print(namecase)
+            if len(namecase) > 1:
+                #self.openWindow(namecase)
+                self.openWindow2(namecase)
+                #self.showDialog()
+                """
+                d = QtWidgets.QDialog()
+                b1 = QtWidgets.QPushButton("ok",d)
+                b1.move(50,50)
+                d.setWindowTitle("Dialog")
+                d.exec_()
+                """
+
+                """
+                dialog = QtWidgets.QMessageBox.question(
+                    MainWindow, 
+                    'No Source Folder',
+                    "Please provide a source folder",
+                    QtWidgets.QMessageBox.Yes
+                )
+                """
+
         for item in os.listdir(self.directory):
             if (
                 item in validNamesSet 
@@ -228,9 +297,9 @@ class Ui_MainWindow(object):
             parser = re.findall('[(]Copy [0-9]+[)]', item)
             if (parser != []):
                 cumulativeList.append(item.replace(parser[-1], "").strip())
-        cumulativeCounterList = Counter(cumulativeList)
-        print("cumulativeList:", cumulativeList)
-        print("cumulativeCounterList:", cumulativeCounterList)
+        cumulativeCounterList = collections.Counter(cumulativeList)
+        #print("cumulativeList:", cumulativeList)
+        #print("cumulativeCounterList:", cumulativeCounterList)
         finalNamesList = []
         for item in validNamesSet:
             if(
@@ -253,8 +322,8 @@ class Ui_MainWindow(object):
             for i in range(len(subfoldersList)):
                 subfoldersList[i][0] = finalNamesList[i]
 
-        print("finalNamesList:", finalNamesList)
-        print("subfoldersList", subfoldersList)
+        #print("finalNamesList:", finalNamesList)
+        #print("subfoldersList", subfoldersList)
         for i in range(len(finalNamesList)):
             if (
                 finalNamesList[i] in os.listdir(self.directory) 
@@ -265,7 +334,7 @@ class Ui_MainWindow(object):
                 os.makedirs(self.directory + "\\" + "\\".join(subfoldersList[i]))
             else: 
                 os.mkdir(self.directory + "\\" + finalNamesList[i])
-        print("~~~Complete!")
+        #print("~~~Complete!")
 
     def openNameListFile(self):
         #print("open")
@@ -297,7 +366,51 @@ class Ui_MainWindow(object):
                 #print(folderNames)
                 fileContents.write(folderNames)
             fileContents.close()
-    
+
+"""
+def __init__(self, namecase):
+    self.namecase = namecase
+def setupUi(self, CaseStyleWindow):
+    self.listWidget.addItems(list(self.namecase))
+"""
+
+class Ui_CaseStyleWindow(object):
+    def __init__(self, namecase):
+        self.namecase = namecase
+
+    def setupUi(self, CaseStyleWindow):
+        CaseStyleWindow.setObjectName("CaseStyleWindow")
+        CaseStyleWindow.resize(300, 420)
+        self.centralwidget = QtWidgets.QWidget(CaseStyleWindow)
+        self.centralwidget.setObjectName("centralwidget")
+        self.listWidget = QtWidgets.QListWidget(self.centralwidget)
+        self.listWidget.setGeometry(QtCore.QRect(20, 40, 260, 300))
+        self.listWidget.setObjectName("listWidget")
+        self.listWidget.addItems(list(self.namecase))
+        self.chooseCasesLabel = QtWidgets.QLabel(self.centralwidget)
+        self.chooseCasesLabel.setGeometry(QtCore.QRect(20, 15, 241, 16))
+        self.chooseCasesLabel.setObjectName("chooseCasesLabel")
+        self.cancelButton = QtWidgets.QPushButton(self.centralwidget)
+        self.cancelButton.setGeometry(QtCore.QRect(205, 380, 75, 23))
+        self.cancelButton.setObjectName("cancelButton")
+        self.okButton = QtWidgets.QPushButton(self.centralwidget)
+        self.okButton.setGeometry(QtCore.QRect(120, 380, 75, 23))
+        self.okButton.setObjectName("okButton")
+        self.cancelLabel = QtWidgets.QLabel(self.centralwidget)
+        self.cancelLabel.setGeometry(QtCore.QRect(20, 350, 241, 21))
+        self.cancelLabel.setObjectName("cancelLabel")
+        #CaseStyleWindow.setCentralWidget(self.centralwidget)
+        self.retranslateUi(CaseStyleWindow)
+        QtCore.QMetaObject.connectSlotsByName(CaseStyleWindow)
+
+    def retranslateUi(self, CaseStyleWindow):
+        _translate = QtCore.QCoreApplication.translate
+        CaseStyleWindow.setWindowTitle(_translate("CaseStyleWindow", "Choose a case style"))
+        self.chooseCasesLabel.setText(_translate("CaseStyleWindow", "Choose the case style to use:"))
+        self.cancelButton.setText(_translate("CaseStyleWindow", "Cancel"))
+        self.okButton.setText(_translate("CaseStyleWindow", "OK"))
+        self.cancelLabel.setText(_translate("CaseStyleWindow", "Click \'Cancel\' in order to use none of them."))
+
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon(os.path.join(basedir, 'images', 'app_logo.ico')))
