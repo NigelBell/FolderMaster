@@ -13,31 +13,31 @@ import collections
 import re
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+basedir = os.path.dirname(__file__)
+
+try:
+    from ctypes import windll  # Only exists on Windows.
+    myappid = 'mycompany.myproduct.subproduct.version'
+    windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+except ImportError:
+    pass
+
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
-        self.directory = os.getcwd()
-        """
-        self.rawFolderNames = ""
-        self.refinedNamesList = ""
-        self.refinedNamesSet = ""
-        self.counterList = ""
-        self.cumulativeList = ""
-        self.cumulativeCounterList = ""
-        self.finalNamesList = ""
-        """
+        self.directory = str(os.getcwd()[0].upper()) + str(os.getcwd()[1:])
 
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(400, 500)
+        MainWindow.resize(400, 520)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
         MainWindow.setSizePolicy(sizePolicy)
-        MainWindow.setMinimumSize(QtCore.QSize(400, 500))
-        MainWindow.setMaximumSize(QtCore.QSize(400, 500))
+        MainWindow.setMinimumSize(QtCore.QSize(400, 520))
+        MainWindow.setMaximumSize(QtCore.QSize(400, 520))
 
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("images/app_logo.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(os.path.join(basedir, 'images', "app_logo.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
 
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -47,11 +47,11 @@ class Ui_MainWindow(object):
         self.sourceButton.setGeometry(QtCore.QRect(355, 15, 30, 30))
         self.sourceButton.setText("")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("images/folder.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap(os.path.join(basedir, 'images', "folder.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.sourceButton.setIcon(icon1)
         self.sourceButton.setObjectName("sourceButton")
         self.sourceButton.clicked.connect(self.choose_directory)
-        
+
         self.directoryTextbox = QtWidgets.QLineEdit(self.centralwidget)
         self.directoryTextbox.setGeometry(QtCore.QRect(72, 15, 280, 30))
         self.directoryTextbox.setObjectName("directoryTextbox")
@@ -79,6 +79,24 @@ class Ui_MainWindow(object):
         self.duplicateFoldersCheckbox.setObjectName("duplicateFoldersCheckbox")
 
         MainWindow.setCentralWidget(self.centralwidget)
+        self.menubar = QtWidgets.QMenuBar(MainWindow)
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 400, 21))
+        self.menubar.setObjectName("menubar")
+        self.menuFile = QtWidgets.QMenu(self.menubar)
+        self.menuFile.setObjectName("menuFile")
+
+        MainWindow.setMenuBar(self.menubar)
+        self.actionOpenNameListFile = QtWidgets.QAction(MainWindow)
+        self.actionOpenNameListFile.setObjectName("actionOpenNameListFile")
+        self.actionOpenNameListFile.triggered.connect(self.openNameListFile)
+        self.actionSaveNameListFile = QtWidgets.QAction(MainWindow)
+        self.actionSaveNameListFile.setObjectName("actionSaveNameListFile")
+        self.actionSaveNameListFile.triggered.connect(self.saveNameListFile)
+
+        self.menuFile.addAction(self.actionOpenNameListFile)
+        self.menuFile.addAction(self.actionSaveNameListFile)
+        self.menubar.addAction(self.menuFile.menuAction())
+
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
@@ -89,20 +107,22 @@ class Ui_MainWindow(object):
         self.directoryLabel.setText(_translate("MainWindow", "Directory:"))
         self.folderNamesLabel.setText(_translate("MainWindow", "Folder Names:"))
         self.duplicateFoldersCheckbox.setText(_translate("MainWindow", "Create cumulative duplicate folders"))
+        self.menuFile.setTitle(_translate("MainWindow", "File"))
+        self.actionOpenNameListFile.setText(_translate("MainWindow", "Open name list file"))
+        self.actionOpenNameListFile.setShortcut(_translate("MainWindow", "Ctrl+O"))
+        self.actionSaveNameListFile.setText(_translate("MainWindow", "Save name list file"))
+        self.actionSaveNameListFile.setShortcut(_translate("MainWindow", "Ctrl+S"))
 
     def choose_directory(self):
-        folder = QtWidgets.QFileDialog.getExistingDirectory(MainWindow, "Choose Directory to Insert Files")
-        folder = folder.replace("/", "\\\\")
+        previousDirectoryTextCopy = self.directoryTextbox.text()
+        folder = QtWidgets.QFileDialog.getExistingDirectory(
+            MainWindow, 
+            "Choose Directory to Insert Files"
+        )
+        if folder == "":
+            folder = previousDirectoryTextCopy
+        folder = folder.replace("/", "\\")
         self.directoryTextbox.setText(folder)
-        """
-        self.rawFolderNames = ""
-        self.refinedNamesList = ""
-        self.refinedNamesSet = ""
-        self.counterList = ""
-        self.cumulativeList = ""
-        self.cumulativeCounterList = ""
-        self.finalNamesList = ""
-        """
 
     def create_folders(self):
         #print("Current directory content", os.listdir())
@@ -120,11 +140,11 @@ class Ui_MainWindow(object):
             for x in rawFolderNames.split("\n") 
             if x.strip()
         ]
-        #print("refinedNamesList:", refinedNamesList)
+        print("refinedNamesList:", refinedNamesList)
         refinedNamesSet = set(refinedNamesList)
         counterList = collections.Counter(refinedNamesList)
-        #print("refinedNamesSet:", refinedNamesSet)
-        #print("counterList:", counterList)
+        print("refinedNamesSet:", refinedNamesSet)
+        print("counterList:", counterList)
         for item in os.listdir(self.directory):
             if (
                 item in refinedNamesSet 
@@ -137,14 +157,14 @@ class Ui_MainWindow(object):
             if (parser != []):
                 cumulativeList.append(item.replace(parser[-1], "").strip())
         cumulativeCounterList = collections.Counter(cumulativeList)
-        #print("cumulativeList:", cumulativeList)
-        #print("cumulativeCounterList:", cumulativeCounterList)
+        print("cumulativeList:", cumulativeList)
+        print("cumulativeCounterList:", cumulativeCounterList)
         finalNamesList = []
         for item in refinedNamesSet:
             if(
                 (
                     self.duplicateFoldersCheckbox.isChecked() 
-                    and counterList[item] > 1
+                    and counterList[item] > 0
                 )
             ):
                 if(item not in os.listdir(self.directory)):
@@ -156,13 +176,45 @@ class Ui_MainWindow(object):
                         finalNamesList.append(item + " " + "(Copy " + str(i + cumulativeCounterList[item]) + ")")
             else:
                 finalNamesList.append(item)
-        #print("finalNamesList:", finalNamesList)
+        print("finalNamesList:", finalNamesList)
         for name in finalNamesList:
             os.mkdir(self.directory + "\\" + name)
         #print("~~~Complete!")
+
+    def openNameListFile(self):
+        #print("open")
+        self.folderNames.clear()
+        fileToOpen = QtWidgets.QFileDialog.getOpenFileName(
+            MainWindow, 
+            "Open Name List Text File",
+            self.directoryTextbox.text(),
+            "Text Files (*.txt)"
+        )
+        if (fileToOpen[0] != ""):
+            with open(fileToOpen[0], "r") as fileContents:
+                for name in fileContents:
+                    #print(name.strip("\n"))
+                    self.folderNames.appendPlainText(name.strip("\n"))
+            fileContents.close()
+
+    def saveNameListFile(self):
+        #print("save")
+        fileToSave = QtWidgets.QFileDialog.getSaveFileName(
+            MainWindow, 
+            "Save Name List Text File",
+            self.directoryTextbox.text(),
+            "Text Files (*.txt)"
+        )
+        if (fileToSave[0] != ""):
+            with open(fileToSave[0], "w") as fileContents:
+                folderNames = self.folderNames.toPlainText()
+                #print(folderNames)
+                fileContents.write(folderNames)
+            fileContents.close()
     
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon(os.path.join(basedir, 'images', 'xor_icon.ico')))
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
