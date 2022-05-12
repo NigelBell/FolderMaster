@@ -181,7 +181,6 @@ class Ui_MainWindow(object):
             currentName = despacedNamesList[i]
             #print(currentName)
 
-            """
             if currentName[0] in ["/"] or currentName[-1] in ["/"]:
                 #print("With:", currentName)
                 currentName = currentName.strip("/")
@@ -190,16 +189,8 @@ class Ui_MainWindow(object):
                 #print("With:", currentName)
                 currentName = currentName.strip("\\")
                 #print("Without:", currentName)
-            """ 
             
             #Note: Maybe handle cancelations
-            """
-            if any(char in currentName for char in subfolderDividers):
-                isSublist = True
-                #print("\t\tBefore splitting:", currentName)
-                #subfolders = re.split("[/\\\\]+", currentName)
-                #currentName = subfolders[0]
-            """
             if currentName[-1] == ".":
                 #print("With:", currentName)
                 currentName = currentName.rstrip(".")
@@ -218,14 +209,15 @@ class Ui_MainWindow(object):
                 letterCasesDict[currentName.lower()].append(currentName)
             else:
                 letterCasesDict[currentName.lower()].append(currentName)
+
+            """
+            if any(char in currentName for char in subfolderDividers):
+                isSublist = True
+                #print("\t\tBefore splitting:", currentName)
+                #subfolders = re.split("[/\\\\]+", currentName)
+                #currentName = subfolders[0]
+            """
             
-            """
-            if currentName.lower() not in letterCasesDict:
-                letterCasesDict[currentName.lower()] = set()
-                letterCasesDict[currentName.lower()].add(currentName)
-            else:
-                letterCasesDict[currentName.lower()].add(currentName)
-            """
             """
             if isSublist:
                 subfolders[0] = currentName
@@ -253,13 +245,15 @@ class Ui_MainWindow(object):
                 if chosenNamecase != "":
                     for i in range(len(namecaseList)):
                         validNamesList.append(chosenNamecase)
-                chosenNamecasesList.append(chosenNamecase)
+                    chosenNamecasesList.append(chosenNamecase)
             else:
                 chosenNamecase = list(namecaseSet)[0]
                 for i in range(len(namecaseList)):
                     validNamesList.append(chosenNamecase)
                 chosenNamecasesList.append(chosenNamecase)
-            chosenNamecasesDict[chosenNamecase.lower()] = chosenNamecase
+            
+            if chosenNamecase != "":
+                chosenNamecasesDict[chosenNamecase.lower()] = chosenNamecase
 
         print("orderedLetterCasesDict:", orderedLetterCasesDict)
         print("chosenNamecasesList:", chosenNamecasesList)
@@ -289,12 +283,13 @@ class Ui_MainWindow(object):
                 continue
             parser = re.findall('[(]Copy [0-9]+[)]', item)
             if (parser != []):
-                #print(parser)
                 strippedItem = item.replace(parser[-1], "").strip()
-                #print("strippedItem:", strippedItem)
-                cumulativeList.append(chosenNamecasesDict[strippedItem.lower()])
-                #print("chosenNamecasesDict item:", chosenNamecasesDict[strippedItem.lower()].split())
-                os.rename(item, chosenNamecasesDict[strippedItem.lower()] + " " + parser[-1])
+                if strippedItem.lower() in chosenNamecasesDict.keys():
+                    #print(parser)
+                    #print("strippedItem:", strippedItem)
+                    cumulativeList.append(chosenNamecasesDict[strippedItem.lower()])
+                    #print("chosenNamecasesDict item:", chosenNamecasesDict[strippedItem.lower()].split())
+                    os.rename(item, chosenNamecasesDict[strippedItem.lower()] + " " + parser[-1])
         cumulativeCounterList = collections.Counter(cumulativeList)
         print("cumulativeList:", cumulativeList)
         print("cumulativeCounterList:", cumulativeCounterList)
