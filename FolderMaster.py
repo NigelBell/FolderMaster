@@ -12,6 +12,7 @@ import sys
 import collections
 import re
 import platform
+import shutil
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 basedir = os.path.dirname(__file__)
@@ -176,7 +177,7 @@ class Ui_MainWindow(object):
         validLeadingNamesList = []
         subfoldersList = []
         #faultyNamesList = []
-        
+        originalOrderDict = {}
         letterCasesDict = {}
         subfoldersDict = {}
         for i in range(len(despacedNamesList)): #Windows filename properties
@@ -214,41 +215,28 @@ class Ui_MainWindow(object):
                 subfolders = re.split("[/\\\\]+", currentName)
                 #subfoldersList.append(subfolders)
                 currentName = subfolders[0]
+                if currentName.lower() not in originalOrderDict:
+                    originalOrderDict[currentName.lower()] = []
                 if currentName.lower() not in subfoldersDict:
                     subfoldersDict[currentName.lower()] = []
-                    subfoldersDict[currentName.lower()].append(subfolders)
-                else:
-                    subfoldersDict[currentName.lower()].append(subfolders)
+                subfoldersDict[currentName.lower()].append(subfolders)
+                originalOrderDict[currentName.lower()].append(subfolders)
             else:
+                if currentName.lower() not in originalOrderDict:
+                    originalOrderDict[currentName.lower()] = []
                 if currentName.lower() not in letterCasesDict:
                     letterCasesDict[currentName.lower()] = []
-                    letterCasesDict[currentName.lower()].append(currentName)
-                else:
-                    letterCasesDict[currentName.lower()].append(currentName)
-            
-            """
-            if isSublist:
-                subfolders[0] = currentName
-                validNamesList.append(currentName)
-                subfoldersList.append(subfolders)
-            else:
-                validNamesList.append(currentName)
-                subfoldersList.append([currentName])
-            """
-
-        """
-        print("validNamesList before:", validNamesList)
-        for key in letterCasesDict.keys():
-            validNamesList = list(filter(lambda a: a.lower() != key, validNamesList))
-        print("validNamesList after:", validNamesList)
-        """
+                letterCasesDict[currentName.lower()].append(currentName)
+                originalOrderDict[currentName.lower()].append(currentName)
+        
         orderedLetterCasesDict = collections.OrderedDict(sorted(letterCasesDict.items()))
         keyUnionSet = set(orderedLetterCasesDict.keys()).union(set(subfoldersDict.keys()))
         keyUnionDict = collections.OrderedDict.fromkeys(sorted(keyUnionSet), None)
 
-        print("orderedLetterCasesDict:", orderedLetterCasesDict)
         #print("subfoldersList", subfoldersList)
-        print("subfoldersDict", subfoldersDict)
+        #print("orderedLetterCasesDict:", orderedLetterCasesDict)
+        #print("subfoldersDict", subfoldersDict)
+        print("originalOrderDict", originalOrderDict)
 
         #print("keyUnionSet:", keyUnionSet)
         #print("keyUnionDict:", keyUnionDict)
@@ -260,65 +248,81 @@ class Ui_MainWindow(object):
         chosenNamecasesDict = {}
 
         for key in keyUnionDict.keys():
-            print("key:", key)
+            #print("key:", key)
             combinedDict[key] = []
             combinedNameCases[key] = []
-
             if key in orderedLetterCasesDict.keys():
                 combinedDict[key].extend(orderedLetterCasesDict[key])
                 combinedNameCases[key].extend(orderedLetterCasesDict[key])
-                
             if key in subfoldersDict.keys():
                 combinedDict[key].extend(subfoldersDict[key])
                 combinedNameCases[key].extend([a[0] for a in subfoldersDict[key]])
-
             combinedUniqueNameCases[key] = set(combinedNameCases[key])
+            #print("\tResult combinedDict[key]", combinedDict[key])
+            #print("\tResult combinedNameCases[key]", combinedNameCases[key])
+            #print("\tResult combinedUniqueNameCases[key]", combinedUniqueNameCases[key])
 
-            print("\tResult combinedDict[key]", combinedDict[key])
-            print("\tResult combinedNameCases[key]", combinedNameCases[key])
-            print("\tResult combinedUniqueNameCases[key]", combinedUniqueNameCases[key])
+        #print("combinedDict", combinedDict)
+        #print("combinedNameCases", combinedNameCases)
+        #print("combinedUniqueNameCases", combinedUniqueNameCases)
 
-        print("combinedDict", combinedDict)
-        print("combinedNameCases", combinedNameCases)
-        print("combinedUniqueNameCases", combinedUniqueNameCases)
-
-        for key in combinedDict.keys():
-            namecaseList = combinedDict[key]
+        validNamesDict = {}
+        for key in originalOrderDict.keys():
+            namecaseList = originalOrderDict[key]
             leadingNamecaseList = combinedNameCases[key]
             namecaseSet = set(leadingNamecaseList)
+
+            validNamesDict[key] = []
 
             if len(namecaseSet) > 1:
                 chosenNamecase = self.openWindow(namecaseSet)
                 #print("chosenNamecase", chosenNamecase)
                 if chosenNamecase != "":
                     #print("case set:", combinedDict[key])
-                    for case in combinedDict[key]:
+                    for case in originalOrderDict[key]:
                         #print("case:", case)
                         if type(case) == list:
                             case[0] = chosenNamecase
                             #print("updatedCase:", case)
                             validNamesList.append(case)
+                            #print("1", case)
+                            validNamesDict[key].append(case)
                             validLeadingNamesList.append(case[0])
                         else:
                             validNamesList.append(chosenNamecase)
+                            #print("2", chosenNamecase)
+                            validNamesDict[key].append(chosenNamecase)
                             validLeadingNamesList.append(chosenNamecase)
                     chosenNamecasesList.append(chosenNamecase)
             else:
-                chosenNamecase = list(namecaseSet)[0]
-                print("chosenNamecase", chosenNamecase)
-                for i in range(len(namecaseList)):
+                #print("originalOrderDict", originalOrderDict[key])
+                chosenNamecase = originalOrderDict[key][0]
+                #print("chosenNamecase", chosenNamecase)
+                #print(namecaseList, len(namecaseList))
+                #for i in range(len(namecaseList)):
+                if type(chosenNamecase) == list:
+                    #print("updatedCase:", case)
                     validNamesList.append(chosenNamecase)
+                    #print("3", chosenNamecase)
+                    validNamesDict[key].append(chosenNamecase)
+                    validLeadingNamesList.append(chosenNamecase[0])
+                    chosenNamecase = chosenNamecase[0]
+                else:
+                    validNamesList.append(chosenNamecase)
+                    #print("4", chosenNamecase)
+                    validNamesDict[key].append(chosenNamecase)
                     validLeadingNamesList.append(chosenNamecase)
                 chosenNamecasesList.append(chosenNamecase)
-
+            #print("chosenNamecasesList", chosenNamecasesList)
             if chosenNamecase != "":
                 chosenNamecasesDict[chosenNamecase.lower()] = chosenNamecase
 
         #for key in subfoldersDict.keys():
         print("validNamesList:", validNamesList)
+        print("validNamesDict:", validNamesDict)
         print("validLeadingNamesList:", validLeadingNamesList)
         print("chosenNamecasesList:", chosenNamecasesList)
-        print("chosenNamecasesDict:", chosenNamecasesDict)
+        #print("chosenNamecasesDict:", chosenNamecasesDict)
 
         #print("faultyNamesList:", faultyNamesList)
        
@@ -364,10 +368,12 @@ class Ui_MainWindow(object):
                 if(item not in os.listdir(self.directory)):
                     finalNamesList.append(item)
                     for i in range(2, counterList[item] + 1):
-                        finalNamesList.append(item + " " + "(Copy " + str(i + cumulativeCounterList[item] - 1) + ")")
+                        newItem = item + " " + "(Copy " + str(i + cumulativeCounterList[item] - 1) + ")"
+                        finalNamesList.append(newItem)
                 else:
                     for i in range(1, counterList[item] + 1):
-                        finalNamesList.append(item + " " + "(Copy " + str(i + cumulativeCounterList[item]) + ")")
+                        newItem = item + " " + "(Copy " + str(i + cumulativeCounterList[item]) + ")"
+                        finalNamesList.append(newItem)
             else:
                 finalNamesList.append(item)
         """
@@ -375,9 +381,37 @@ class Ui_MainWindow(object):
             for i in range(len(subfoldersList)):
                 subfoldersList[i][0] = finalNamesList[i]
         """
-
         print("finalNamesList:", finalNamesList)
         print("validNamesList", validNamesList)
+
+        #if not self.duplicateFoldersCheckbox.isChecked():
+        #    firstInstancesDict = {}    
+
+        namesList = finalNamesList if not self.duplicateFoldersCheckbox.isChecked() else validNamesList
+        
+        if not self.duplicateFoldersCheckbox.isChecked(): 
+            for name in namesList:
+                nameFromDict = validNamesDict[name.lower()][0]
+                if type(nameFromDict) == list:
+                    print(name)
+                    if name in os.listdir(self.directory):
+                        folderDirectory = os.path.join(self.directory, nameFromDict[0])
+                        shutil.rmtree(folderDirectory)
+                    os.makedirs(self.directory + "\\" + "\\".join(nameFromDict))
+                else:
+                    if name in os.listdir(self.directory):
+                        folderDirectory = os.path.join(self.directory, name)
+                        print(folderDirectory)
+                        if len(os.listdir(folderDirectory)) > 0:
+                            shutil.rmtree(folderDirectory)
+                        else:
+                            continue
+                    os.mkdir(self.directory + "\\" + validNamesDict[name.lower()][0])
+        #else:
+        #   for name in namesList:
+        #        if type(validNamesDict[name.lower()][0]) == list:
+                    
+        """
         for i in range(len(finalNamesList)):
             if (
                 finalNamesList[i] in os.listdir(self.directory) 
@@ -392,6 +426,7 @@ class Ui_MainWindow(object):
                 os.makedirs(self.directory + "\\" + "\\".join(finalNamesList[i]))
             else: 
                 os.mkdir(self.directory + "\\" + finalNamesList[i])
+        """
         print("finalNamesList", finalNamesList)
         print("~~~Complete!")
 
