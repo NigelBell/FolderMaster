@@ -240,43 +240,72 @@ class Ui_MainWindow(object):
             validNamesList = list(filter(lambda a: a.lower() != key, validNamesList))
         print("validNamesList after:", validNamesList)
         """
-        print("subfoldersList", subfoldersList)
-        print("subfoldersDict", subfoldersDict)
-        chosenNamecasesList = []
-        chosenNamecasesDict = {}
         orderedLetterCasesDict = collections.OrderedDict(sorted(letterCasesDict.items()))
         keyUnionSet = set(orderedLetterCasesDict.keys()).union(set(subfoldersDict.keys()))
         keyUnionDict = collections.OrderedDict.fromkeys(sorted(keyUnionSet), None)
+
+        print("orderedLetterCasesDict:", orderedLetterCasesDict)
+        #print("subfoldersList", subfoldersList)
+        print("subfoldersDict", subfoldersDict)
+
         #print("keyUnionSet:", keyUnionSet)
         print("keyUnionDict:", keyUnionDict)
 
-        for key in orderedLetterCasesDict.keys():
-            namecaseList = orderedLetterCasesDict.get(key)
+        combinedDict = {}
+        combinedNameCases = {}
+        combinedUniqueNameCases = {}
+        chosenNamecasesList = []
+        chosenNamecasesDict = {}
+
+        for key in keyUnionDict.keys():
+            print("key:", key)
+            combinedDict[key] = []
+            combinedNameCases[key] = []
+
+            if key in orderedLetterCasesDict.keys():
+                combinedDict[key].extend(orderedLetterCasesDict[key])
+                combinedNameCases[key].extend(orderedLetterCasesDict[key])
+                
+            if key in subfoldersDict.keys():
+                combinedDict[key].extend(subfoldersDict[key])
+                combinedNameCases[key].extend([a[0] for a in subfoldersDict[key]])
+
+            combinedUniqueNameCases[key] = set(combinedNameCases[key])
+
+            #print("\tResult combinedDict[key]", combinedDict[key])
+            print("\tResult combinedNameCases[key]", combinedNameCases[key])
+            print("\tResult combinedUniqueNameCases[key]", combinedUniqueNameCases[key])
+
+        print("combinedNameCases", combinedNameCases)
+        print("combinedUniqueNameCases", combinedUniqueNameCases)
+ 
+        for key in combinedNameCases.keys():
+            namecaseList = combinedNameCases[key]
             namecaseSet = set(namecaseList)
             if len(namecaseSet) > 1:
                 chosenNamecase = self.openWindow(namecaseSet)
+                print("chosenNamecase", chosenNamecase)
                 if chosenNamecase != "":
                     for i in range(len(namecaseList)):
                         validNamesList.append(chosenNamecase)
                     chosenNamecasesList.append(chosenNamecase)
             else:
                 chosenNamecase = list(namecaseSet)[0]
+                print("chosenNamecase", chosenNamecase)
                 for i in range(len(namecaseList)):
                     validNamesList.append(chosenNamecase)
                 chosenNamecasesList.append(chosenNamecase)
-            
+
             if chosenNamecase != "":
                 chosenNamecasesDict[chosenNamecase.lower()] = chosenNamecase
 
         #for key in subfoldersDict.keys():
-            
-
-        print("orderedLetterCasesDict:", orderedLetterCasesDict)
+        print("validNamesList:", validNamesList)
         print("chosenNamecasesList:", chosenNamecasesList)
-        print("chosenNamecasesDict:", chosenNamecasesDict)
+        #print("chosenNamecasesDict:", chosenNamecasesDict)
 
         #print("faultyNamesList:", faultyNamesList)
-        print("validNamesList:", validNamesList)
+       
         #print("subfoldersList:", subfoldersList)
         #validNamesSet = set(validNamesList)
         counterList = collections.Counter(validNamesList)
@@ -307,8 +336,8 @@ class Ui_MainWindow(object):
                     #print("chosenNamecasesDict item:", chosenNamecasesDict[strippedItem.lower()].split())
                     os.rename(item, chosenNamecasesDict[strippedItem.lower()] + " " + parser[-1])
         cumulativeCounterList = collections.Counter(cumulativeList)
-        print("cumulativeList:", cumulativeList)
-        print("cumulativeCounterList:", cumulativeCounterList)
+        #print("cumulativeList:", cumulativeList)
+        #print("cumulativeCounterList:", cumulativeCounterList)
 
         finalNamesList = []
         for item in chosenNamecasesList: #validNamesSet:
@@ -331,7 +360,7 @@ class Ui_MainWindow(object):
                 subfoldersList[i][0] = finalNamesList[i]
         """
 
-        print("finalNamesList:", finalNamesList)
+        #print("finalNamesList:", finalNamesList)
         #print("subfoldersList", subfoldersList)
         for i in range(len(finalNamesList)):
             if (
