@@ -245,7 +245,6 @@ class Ui_MainWindow(object):
         chosenNamecasesList = []
         chosenNamecasesDict = {}
         orderedLetterCasesDict = collections.OrderedDict(sorted(letterCasesDict.items()))
-        print("orderedLetterCasesDict:", orderedLetterCasesDict)
         for key in orderedLetterCasesDict.keys():
             namecaseList = orderedLetterCasesDict.get(key)
             namecaseSet = set(namecaseList)
@@ -290,9 +289,10 @@ class Ui_MainWindow(object):
                 continue
             parser = re.findall('[(]Copy [0-9]+[)]', item)
             if (parser != []):
+                #print(parser)
                 strippedItem = item.replace(parser[-1], "").strip()
                 #print("strippedItem:", strippedItem)
-                cumulativeList.append(strippedItem)
+                cumulativeList.append(chosenNamecasesDict[strippedItem.lower()])
                 #print("chosenNamecasesDict item:", chosenNamecasesDict[strippedItem.lower()].split())
                 os.rename(item, chosenNamecasesDict[strippedItem.lower()] + " " + parser[-1])
         cumulativeCounterList = collections.Counter(cumulativeList)
@@ -301,12 +301,11 @@ class Ui_MainWindow(object):
 
         finalNamesList = []
         for item in chosenNamecasesList: #validNamesSet:
-            if(
-                (
-                    self.duplicateFoldersCheckbox.isChecked() 
-                    and counterList[item] > 0
-                )
-            ):
+            if((
+                self.duplicateFoldersCheckbox.isChecked() 
+                and counterList[item] > 0
+            )):
+                print("item:", item)
                 if(item not in os.listdir(self.directory)):
                     finalNamesList.append(item)
                     for i in range(2, counterList[item] + 1):
