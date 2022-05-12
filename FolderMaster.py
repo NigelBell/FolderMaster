@@ -173,11 +173,12 @@ class Ui_MainWindow(object):
         ]
         #print(despacedNamesList)
         validNamesList = []
-        #subfoldersList = []
+        subfoldersList = []
         #faultyNamesList = []
         letterCasesDict = {}
+        subfoldersDict = {}
         for i in range(len(despacedNamesList)): #Windows filename properties
-            #isSublist = False
+            isSublist = False
             currentName = despacedNamesList[i]
             #print(currentName)
 
@@ -203,20 +204,25 @@ class Ui_MainWindow(object):
             if any(char in currentName for char in reservedCharacters):
                 #print("Contains reserved characters:", currentName)
                 continue
-            
-            if currentName.lower() not in letterCasesDict:
-                letterCasesDict[currentName.lower()] = []
-                letterCasesDict[currentName.lower()].append(currentName)
-            else:
-                letterCasesDict[currentName.lower()].append(currentName)
 
-            """
             if any(char in currentName for char in subfolderDividers):
                 isSublist = True
-                #print("\t\tBefore splitting:", currentName)
-                #subfolders = re.split("[/\\\\]+", currentName)
-                #currentName = subfolders[0]
-            """
+            
+            if isSublist:
+                subfolders = re.split("[/\\\\]+", currentName)
+                #subfoldersList.append(subfolders)
+                currentName = subfolders[0]
+                if currentName.lower() not in subfoldersDict:
+                    subfoldersDict[currentName.lower()] = []
+                    subfoldersDict[currentName.lower()].append(subfolders)
+                else:
+                    subfoldersDict[currentName.lower()].append(subfolders)
+            else:
+                if currentName.lower() not in letterCasesDict:
+                    letterCasesDict[currentName.lower()] = []
+                    letterCasesDict[currentName.lower()].append(currentName)
+                else:
+                    letterCasesDict[currentName.lower()].append(currentName)
             
             """
             if isSublist:
@@ -234,9 +240,16 @@ class Ui_MainWindow(object):
             validNamesList = list(filter(lambda a: a.lower() != key, validNamesList))
         print("validNamesList after:", validNamesList)
         """
+        print("subfoldersList", subfoldersList)
+        print("subfoldersDict", subfoldersDict)
         chosenNamecasesList = []
         chosenNamecasesDict = {}
         orderedLetterCasesDict = collections.OrderedDict(sorted(letterCasesDict.items()))
+        keyUnionSet = set(orderedLetterCasesDict.keys()).union(set(subfoldersDict.keys()))
+        keyUnionDict = collections.OrderedDict.fromkeys(sorted(keyUnionSet), None)
+        #print("keyUnionSet:", keyUnionSet)
+        print("keyUnionDict:", keyUnionDict)
+
         for key in orderedLetterCasesDict.keys():
             namecaseList = orderedLetterCasesDict.get(key)
             namecaseSet = set(namecaseList)
@@ -254,6 +267,9 @@ class Ui_MainWindow(object):
             
             if chosenNamecase != "":
                 chosenNamecasesDict[chosenNamecase.lower()] = chosenNamecase
+
+        #for key in subfoldersDict.keys():
+            
 
         print("orderedLetterCasesDict:", orderedLetterCasesDict)
         print("chosenNamecasesList:", chosenNamecasesList)
@@ -300,7 +316,6 @@ class Ui_MainWindow(object):
                 self.duplicateFoldersCheckbox.isChecked() 
                 and counterList[item] > 0
             )):
-                print("item:", item)
                 if(item not in os.listdir(self.directory)):
                     finalNamesList.append(item)
                     for i in range(2, counterList[item] + 1):
