@@ -31,6 +31,7 @@ except ImportError:
     * Pop up boxes to handle:
         * Faulty names
         * Same name (choose which one to use) 
+    * handle tabs
 """
 reservedCharacters = []
 subfolderDividers = []
@@ -47,18 +48,10 @@ if platform.system() == "Windows":
     ]
 
 class Ui_MainWindow(object):
-    def closeMe(self):
-        self.close()
     def openWindow(self, namecases):
-        self.window = QtWidgets.QDialog()
-        self.ui = Ui_CaseStyleWindow(namecases)
-        print("namecases: ", self.ui.namecases)
-        self.ui.setupUi(self.window)
-        self.ui.listWidget.addItems(list(self.ui.namecases))
-        #self.ui.cancelButton.clicked.connect(self.ui.closeWithoutCaseStyle)
-        #self.window.show()
-        self.window.exec_()
-
+        w = CaseStyleWindowConnector(namecases)
+        w.exec_()
+        return w.selectedCase
 
     def setupUi(self, MainWindow):
         self.directory = str(os.getcwd()[0].upper()) + str(os.getcwd()[1:])
@@ -247,12 +240,16 @@ class Ui_MainWindow(object):
         #print("validNamesSet:", validNamesSet)
         #print("counterList:", counterList)
 
+        chosenNamecasesList = []
         for key in orderedLetterCasesDict.keys():
             print(key)
             namecase = orderedLetterCasesDict.get(key)
-            print(namecase)
             if len(namecase) > 1:
-                self.openWindow(namecase)
+                chosenNamecase = self.openWindow(namecase)
+                if chosenNamecase != "":
+                    chosenNamecasesList.append(chosenNamecase)
+
+        print("chosenNamecasesList:", chosenNamecasesList)
 
         for item in os.listdir(self.directory):
             if (
@@ -335,17 +332,12 @@ class Ui_MainWindow(object):
                 fileContents.write(folderNames)
             fileContents.close()
 
-class Ui_CaseStyleWindow(QtWidgets.QDialog):
-    def __init__(self, namecases):
-        #super(Ui_CaseStyleWindow, self).__init__()
-        QtWidgets.QDialog.__init__(self)
-        self.namecases = namecases
-        self.selectedCase = ""
-
+class Ui_CaseStyleWindow(object):
     def setupUi(self, CaseStyleWindow):
         CaseStyleWindow.setObjectName("CaseStyleWindow")
-        CaseStyleWindow.resize(300, 420) 
+        CaseStyleWindow.resize(300, 420)
         self.centralwidget = QtWidgets.QWidget(CaseStyleWindow)
+        self.centralwidget.setGeometry(QtCore.QRect(0, 0, 300, 418))
         self.centralwidget.setObjectName("centralwidget")
         self.listWidget = QtWidgets.QListWidget(self.centralwidget)
         self.listWidget.setGeometry(QtCore.QRect(20, 40, 260, 300))
@@ -353,39 +345,44 @@ class Ui_CaseStyleWindow(QtWidgets.QDialog):
         self.chooseCasesLabel = QtWidgets.QLabel(self.centralwidget)
         self.chooseCasesLabel.setGeometry(QtCore.QRect(20, 15, 241, 16))
         self.chooseCasesLabel.setObjectName("chooseCasesLabel")
-        """
-        self.cancelButton = QtWidgets.QPushButton(self.centralwidget)
-        self.cancelButton.setGeometry(QtCore.QRect(205, 380, 75, 23))
-        self.cancelButton.setObjectName("cancelButton")
-        self.okButton = QtWidgets.QPushButton(self.centralwidget)
-        self.okButton.setGeometry(QtCore.QRect(120, 380, 75, 23))
-        self.okButton.setObjectName("okButton")
-        """
         self.cancelLabel = QtWidgets.QLabel(self.centralwidget)
         self.cancelLabel.setGeometry(QtCore.QRect(20, 350, 241, 21))
         self.cancelLabel.setObjectName("cancelLabel")
-
-        self.btnBox = QtWidgets.QDialogButtonBox()
-        self.btnBox.setStandardButtons(
-            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
-        )
-
+        self.buttonBox = QtWidgets.QDialogButtonBox(self.centralwidget)
+        self.buttonBox.setGeometry(QtCore.QRect(130, 380, 150, 25))
+        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
         self.retranslateUi(CaseStyleWindow)
         QtCore.QMetaObject.connectSlotsByName(CaseStyleWindow)
-        
+
+    def retranslateUi(self, CaseStyleWindow):
+        _translate = QtCore.QCoreApplication.translate
+        CaseStyleWindow.setWindowTitle(_translate("CaseStyleWindow", "Choose a case style"))
+        self.chooseCasesLabel.setText(_translate("CaseStyleWindow", "Choose the case style to use:"))
+        self.cancelLabel.setText(_translate("CaseStyleWindow", "Click \'Cancel\' in order to use none of them."))
+
+class CaseStyleWindowConnector(QtWidgets.QDialog, Ui_CaseStyleWindow):
+    def __init__(self, namecases):
+        #super(Ui_CaseStyleWindow, self).__init__()
+        super(CaseStyleWindowConnector, self).__init__()
+        self.setupUi(self)
+        self.namecases = namecases
+        self.selectedCase = ""
+
+        self.listWidget.addItems(self.namecases)
         self.listWidget.itemSelectionChanged.connect(self.selectionChanged)
-        #self.okButton.clicked.connect(self.closeWithCaseStyle)
-        #self.cancelButton.clicked.connect(self.closeWithoutCaseStyle)
+        self.buttonBox.accepted.connect(self.closeWithCaseStyle)
+        self.buttonBox.rejected.connect(self.closeWithoutCaseStyle)
 
     def selectionChanged(self):
         self.selectedCase = self.listWidget.currentItem().text()
-        print("Selected item:", self.selectedCase)
+        #print("Selected item:", self.selectedCase)
 
     def closeWithCaseStyle(self):
         if self.selectedCase != "":
             self.selectedCase = self.listWidget.currentItem().text()
-            print("Chosen item:", self.selectedCase)
-            #self.()
+            #print("Chosen item:", self.selectedCase)
+            QtWidgets.QDialog.close(self)
         else:
             QtWidgets.QMessageBox.question(
                 MainWindow, 
@@ -396,20 +393,9 @@ class Ui_CaseStyleWindow(QtWidgets.QDialog):
 
     def closeWithoutCaseStyle(self):
         self.selectedCase = ""
-        print("No item chosen:")
+        #print("No item chosen:")
         QtWidgets.QDialog.close(self)
     
-
-    def retranslateUi(self, CaseStyleWindow):
-        _translate = QtCore.QCoreApplication.translate
-        CaseStyleWindow.setWindowTitle(_translate("CaseStyleWindow", "Choose a case style"))
-        self.chooseCasesLabel.setText(_translate("CaseStyleWindow", "Choose the case style to use:"))
-        """
-        self.cancelButton.setText(_translate("CaseStyleWindow", "Cancel"))
-        self.okButton.setText(_translate("CaseStyleWindow", "OK"))
-        """
-        self.cancelLabel.setText(_translate("CaseStyleWindow", "Click \'Cancel\' in order to use none of them."))
-
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon(os.path.join(basedir, 'images', 'app_logo.ico')))
