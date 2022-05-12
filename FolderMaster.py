@@ -173,14 +173,15 @@ class Ui_MainWindow(object):
         ]
         #print(despacedNamesList)
         validNamesList = []
-        subfoldersList = []
+        #subfoldersList = []
         #faultyNamesList = []
         letterCasesDict = {}
         for i in range(len(despacedNamesList)): #Windows filename properties
-            isSublist = False
+            #isSublist = False
             currentName = despacedNamesList[i]
             #print(currentName)
 
+            """
             if currentName[0] in ["/"] or currentName[-1] in ["/"]:
                 #print("With:", currentName)
                 currentName = currentName.strip("/")
@@ -189,14 +190,16 @@ class Ui_MainWindow(object):
                 #print("With:", currentName)
                 currentName = currentName.strip("\\")
                 #print("Without:", currentName)
-
+            """ 
+            
             #Note: Maybe handle cancelations
+            """
             if any(char in currentName for char in subfolderDividers):
                 isSublist = True
                 #print("\t\tBefore splitting:", currentName)
-                subfolders = re.split("[/\\\\]+", currentName)
-                currentName = subfolders[0]
-
+                #subfolders = re.split("[/\\\\]+", currentName)
+                #currentName = subfolders[0]
+            """
             if currentName[-1] == ".":
                 #print("With:", currentName)
                 currentName = currentName.rstrip(".")
@@ -211,11 +214,19 @@ class Ui_MainWindow(object):
                 continue
             
             if currentName.lower() not in letterCasesDict:
+                letterCasesDict[currentName.lower()] = []
+                letterCasesDict[currentName.lower()].append(currentName)
+            else:
+                letterCasesDict[currentName.lower()].append(currentName)
+            
+            """
+            if currentName.lower() not in letterCasesDict:
                 letterCasesDict[currentName.lower()] = set()
                 letterCasesDict[currentName.lower()].add(currentName)
             else:
                 letterCasesDict[currentName.lower()].add(currentName)
-
+            """
+            """
             if isSublist:
                 subfolders[0] = currentName
                 validNamesList.append(currentName)
@@ -223,50 +234,73 @@ class Ui_MainWindow(object):
             else:
                 validNamesList.append(currentName)
                 subfoldersList.append([currentName])
+            """
 
+        """
         print("validNamesList before:", validNamesList)
         for key in letterCasesDict.keys():
             validNamesList = list(filter(lambda a: a.lower() != key, validNamesList))
         print("validNamesList after:", validNamesList)
-
-        print("letterCasesDict:", letterCasesDict)
+        """
+        chosenNamecasesList = []
+        chosenNamecasesDict = {}
         orderedLetterCasesDict = collections.OrderedDict(sorted(letterCasesDict.items()))
         print("orderedLetterCasesDict:", orderedLetterCasesDict)
+        for key in orderedLetterCasesDict.keys():
+            namecaseList = orderedLetterCasesDict.get(key)
+            namecaseSet = set(namecaseList)
+            if len(namecaseSet) > 1:
+                chosenNamecase = self.openWindow(namecaseSet)
+                if chosenNamecase != "":
+                    for i in range(len(namecaseList)):
+                        validNamesList.append(chosenNamecase)
+                chosenNamecasesList.append(chosenNamecase)
+            else:
+                chosenNamecase = list(namecaseSet)[0]
+                for i in range(len(namecaseList)):
+                    validNamesList.append(chosenNamecase)
+                chosenNamecasesList.append(chosenNamecase)
+            chosenNamecasesDict[chosenNamecase.lower()] = chosenNamecase
+
+        print("orderedLetterCasesDict:", orderedLetterCasesDict)
+        print("chosenNamecasesList:", chosenNamecasesList)
+        print("chosenNamecasesDict:", chosenNamecasesDict)
+
         #print("faultyNamesList:", faultyNamesList)
         print("validNamesList:", validNamesList)
-        print("subfoldersList:", subfoldersList)
-        validNamesSet = set(validNamesList)
+        #print("subfoldersList:", subfoldersList)
+        #validNamesSet = set(validNamesList)
         counterList = collections.Counter(validNamesList)
         #print("validNamesSet:", validNamesSet)
         #print("counterList:", counterList)
-
-        chosenNamecasesList = []
-        for key in orderedLetterCasesDict.keys():
-            print(key)
-            namecase = orderedLetterCasesDict.get(key)
-            if len(namecase) > 1:
-                chosenNamecase = self.openWindow(namecase)
-                if chosenNamecase != "":
-                    chosenNamecasesList.append(chosenNamecase)
-
-        print("chosenNamecasesList:", chosenNamecasesList)
-
+    
+        """
         for item in os.listdir(self.directory):
             if (
                 item in validNamesSet 
                 and not self.duplicateFoldersCheckbox.isChecked()
             ):
                 validNamesSet.remove(item)
+        """
         cumulativeList = []
         for item in os.listdir(self.directory):
+            if item.lower() in chosenNamecasesDict.keys():
+                #print(chosenNamecasesDict[item.lower()])
+                os.rename(item, chosenNamecasesDict[item.lower()])
+                continue
             parser = re.findall('[(]Copy [0-9]+[)]', item)
             if (parser != []):
-                cumulativeList.append(item.replace(parser[-1], "").strip())
+                strippedItem = item.replace(parser[-1], "").strip()
+                #print("strippedItem:", strippedItem)
+                cumulativeList.append(strippedItem)
+                #print("chosenNamecasesDict item:", chosenNamecasesDict[strippedItem.lower()].split())
+                os.rename(item, chosenNamecasesDict[strippedItem.lower()] + " " + parser[-1])
         cumulativeCounterList = collections.Counter(cumulativeList)
-        #print("cumulativeList:", cumulativeList)
-        #print("cumulativeCounterList:", cumulativeCounterList)
+        print("cumulativeList:", cumulativeList)
+        print("cumulativeCounterList:", cumulativeCounterList)
+
         finalNamesList = []
-        for item in validNamesSet:
+        for item in chosenNamecasesList: #validNamesSet:
             if(
                 (
                     self.duplicateFoldersCheckbox.isChecked() 
@@ -282,12 +316,13 @@ class Ui_MainWindow(object):
                         finalNamesList.append(item + " " + "(Copy " + str(i + cumulativeCounterList[item]) + ")")
             else:
                 finalNamesList.append(item)
-        
+        """
         if self.duplicateFoldersCheckbox.isChecked():
             for i in range(len(subfoldersList)):
                 subfoldersList[i][0] = finalNamesList[i]
+        """
 
-        #print("finalNamesList:", finalNamesList)
+        print("finalNamesList:", finalNamesList)
         #print("subfoldersList", subfoldersList)
         for i in range(len(finalNamesList)):
             if (
@@ -295,10 +330,12 @@ class Ui_MainWindow(object):
                 and not self.duplicateFoldersCheckbox.isChecked()
             ):
                 return
-            elif len(subfoldersList[i]) > 1:
-                os.makedirs(self.directory + "\\" + "\\".join(subfoldersList[i]))
             else: 
                 os.mkdir(self.directory + "\\" + finalNamesList[i])
+            """
+            elif len(subfoldersList[i]) > 1:
+                os.makedirs(self.directory + "\\" + "\\".join(subfoldersList[i]))
+            """
         #print("~~~Complete!")
 
     def openNameListFile(self):
