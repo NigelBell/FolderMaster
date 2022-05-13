@@ -361,27 +361,62 @@ class Ui_MainWindow(object):
 
         finalNamesList = []
         for item in chosenNamecasesList: #validNamesSet:
-            if((
+            if(
                 self.duplicateFoldersCheckbox.isChecked() 
                 and counterList[item] > 0
-            )):
+            ):
                 if(item not in os.listdir(self.directory)):
-                    finalNamesList.append(item)
-                    for i in range(2, counterList[item] + 1):
+                    currentValidName = validNamesList[len(finalNamesList)]
+                    if type(currentValidName) == list:
+                        currentValidName[0] = item
+                        print("1", currentValidName)
+                        finalNamesList.append(currentValidName)
+                    else:
+                        print("2", currentValidName)
+                        finalNamesList.append(item)
+                    for i in range(2, counterList[item] + 1): 
                         newItem = item + " " + "(Copy " + str(i + cumulativeCounterList[item] - 1) + ")"
-                        finalNamesList.append(newItem)
+                        currentValidName = validNamesList[len(finalNamesList)]
+                        if type(currentValidName) == list:
+                            currentValidName[0] = newItem
+                            print("3", currentValidName)
+                            finalNamesList.append(currentValidName)
+                        else:
+                            currentValidName = validNamesList[len(finalNamesList)] = newItem
+                            print("4", currentValidName)
+                            finalNamesList.append(currentValidName)
                 else:
                     for i in range(1, counterList[item] + 1):
                         newItem = item + " " + "(Copy " + str(i + cumulativeCounterList[item]) + ")"
-                        finalNamesList.append(newItem)
+                        currentValidName = validNamesList[len(finalNamesList)]
+                        if type(currentValidName) == list:
+                            currentValidName[0] = newItem
+                            print("5", currentValidName)
+                            finalNamesList.append(currentValidName)
+                        else:
+                            currentValidName = validNamesList[len(finalNamesList)] = newItem
+                            print("6", currentValidName)
+                            finalNamesList.append(currentValidName)
             else:
                 finalNamesList.append(item)
+                #print(len(finalNamesList))
+        """
+        for i in range(len(validNamesList)):
+            if validNamesList[i] == finalNamesList[i]:
+                continue
+            else:
+                if type(validNamesList[i]) == list:
+                    validNamesList[i][0].replace(validNamesList[i][0], finalNamesList[i], 1)
+                else:
+                    validNamesList[i].replace(validNamesList[i], finalNamesList[i], 1)
+        """
+
         """
         if self.duplicateFoldersCheckbox.isChecked():
             for i in range(len(subfoldersList)):
                 subfoldersList[i][0] = finalNamesList[i]
         """
-        print("finalNamesList:", finalNamesList)
+        print("finalNamesList", finalNamesList)
         print("validNamesList", validNamesList)
 
         #if not self.duplicateFoldersCheckbox.isChecked():
@@ -393,7 +428,6 @@ class Ui_MainWindow(object):
             for name in namesList:
                 nameFromDict = validNamesDict[name.lower()][0]
                 if type(nameFromDict) == list:
-                    print(name)
                     if name in os.listdir(self.directory):
                         folderDirectory = os.path.join(self.directory, nameFromDict[0])
                         shutil.rmtree(folderDirectory)
@@ -401,32 +435,23 @@ class Ui_MainWindow(object):
                 else:
                     if name in os.listdir(self.directory):
                         folderDirectory = os.path.join(self.directory, name)
-                        print(folderDirectory)
                         if len(os.listdir(folderDirectory)) > 0:
                             shutil.rmtree(folderDirectory)
                         else:
                             continue
                     os.mkdir(self.directory + "\\" + validNamesDict[name.lower()][0])
-        #else:
-        #   for name in namesList:
-        #        if type(validNamesDict[name.lower()][0]) == list:
-                    
-        """
-        for i in range(len(finalNamesList)):
-            if (
-                finalNamesList[i] in os.listdir(self.directory) 
-                and not self.duplicateFoldersCheckbox.isChecked()
-            ):
-                return
-            elif type(validNamesList[i]) == list:
-                print("Before:", finalNamesList[i], "|", validNamesList[i])
-                validNamesList[i][0] = finalNamesList[i]
-                finalNamesList[i] = validNamesList[i]
-                print("After:", finalNamesList[i], "|", validNamesList[i])
-                os.makedirs(self.directory + "\\" + "\\".join(finalNamesList[i]))
-            else: 
-                os.mkdir(self.directory + "\\" + finalNamesList[i])
-        """
+        else:
+            for name in namesList:
+                if type(name) == list:
+                    #print("Before:", finalNamesList[i], "|", validNamesList[i])
+                    #validNamesList[i][0] = finalNamesList[i]
+                    #finalNamesList[i] = validNamesList[i]
+                    #print("After:", finalNamesList[i], "|", validNamesList[i])
+                    print("name", name)
+                    os.makedirs(self.directory + "\\" + "\\".join(name))
+                else: 
+                    os.mkdir(self.directory + "\\" + name)
+
         print("finalNamesList", finalNamesList)
         print("~~~Complete!")
 
