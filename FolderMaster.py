@@ -49,11 +49,6 @@ if platform.system() == "Windows":
     ]
 
 class Ui_MainWindow(object):
-    def openWindow(self, namecases):
-        w = CaseStyleWindowConnector(namecases)
-        w.exec_()
-        return w.selectedCase
-
     def setupUi(self, MainWindow):
         self.directory = str(os.getcwd()[0].upper()) + str(os.getcwd()[1:])
 
@@ -81,7 +76,7 @@ class Ui_MainWindow(object):
         icon1.addPixmap(QtGui.QPixmap(os.path.join(basedir, 'images', "folder.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.sourceButton.setIcon(icon1)
         self.sourceButton.setObjectName("sourceButton")
-        self.sourceButton.clicked.connect(self.chooseDirectory)
+        self.sourceButton.clicked.connect(MainWindow.chooseDirectory)
 
         self.directoryTextbox = QtWidgets.QLineEdit(self.centralwidget)
         self.directoryTextbox.setGeometry(QtCore.QRect(72, 15, 280, 30))
@@ -95,7 +90,7 @@ class Ui_MainWindow(object):
         self.createButton = QtWidgets.QPushButton(self.centralwidget)
         self.createButton.setGeometry(QtCore.QRect(274, 455, 111, 31))
         self.createButton.setObjectName("createButton")
-        self.createButton.clicked.connect(self.createFolders)
+        self.createButton.clicked.connect(MainWindow.createFolders)
 
         self.directoryLabel = QtWidgets.QLabel(self.centralwidget)
         self.directoryLabel.setGeometry(QtCore.QRect(20, 23, 47, 13))
@@ -119,10 +114,10 @@ class Ui_MainWindow(object):
         MainWindow.setMenuBar(self.menubar)
         self.actionOpenNameListFile = QtWidgets.QAction(MainWindow)
         self.actionOpenNameListFile.setObjectName("actionOpenNameListFile")
-        self.actionOpenNameListFile.triggered.connect(self.openNameListFile)
+        self.actionOpenNameListFile.triggered.connect(MainWindow.openNameListFile)
         self.actionSaveNameListFile = QtWidgets.QAction(MainWindow)
         self.actionSaveNameListFile.setObjectName("actionSaveNameListFile")
-        self.actionSaveNameListFile.triggered.connect(self.saveNameListFile)
+        self.actionSaveNameListFile.triggered.connect(MainWindow.saveNameListFile)
 
         self.menuFile.addAction(self.actionOpenNameListFile)
         self.menuFile.addAction(self.actionSaveNameListFile)
@@ -144,29 +139,40 @@ class Ui_MainWindow(object):
         self.actionSaveNameListFile.setText(_translate("MainWindow", "Save name list file"))
         self.actionSaveNameListFile.setShortcut(_translate("MainWindow", "Ctrl+S"))
 
+class MainWindow(QtWidgets.QMainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+    
+    def openWindow(self, namecases):
+        w = CaseStyleWindowConnector(namecases)
+        w.exec_()
+        return w.selectedCase
+
     def chooseDirectory(self):
-        previousDirectoryTextCopy = self.directoryTextbox.text()
+        previousDirectoryTextCopy = self.ui.directoryTextbox.text()
         folder = QtWidgets.QFileDialog.getExistingDirectory(
-            MainWindow, 
+            self, 
             "Choose Directory to Insert Files"
         )
         if folder == "":
             folder = previousDirectoryTextCopy
         folder = folder.replace("/", "\\")
-        self.directoryTextbox.setText(folder)
+        self.ui.directoryTextbox.setText(folder)
 
     def createFolders(self):
         #print("Current directory content", os.listdir())
-        self.directory = self.directoryTextbox.text()
+        self.directory = self.ui.directoryTextbox.text()
         if self.directory == "":
             dialog = QtWidgets.QMessageBox.question(
-                MainWindow, 
+                self, 
                 'No Source Folder',
                 "Please provide a source folder",
                 QtWidgets.QMessageBox.Ok
             )
             return
-        rawNamesList = self.folderNames.toPlainText()
+        rawNamesList = self.ui.folderNames.toPlainText()
         despacedNamesList = [
             x.strip()
             for x in rawNamesList.split("\n") 
@@ -362,7 +368,7 @@ class Ui_MainWindow(object):
         finalNamesList = []
         for item in chosenNamecasesList: #validNamesSet:
             if(
-                self.duplicateFoldersCheckbox.isChecked() 
+                self.ui.duplicateFoldersCheckbox.isChecked() 
                 and counterList[item] > 0
             ):
                 if(item not in os.listdir(self.directory)):
@@ -422,9 +428,9 @@ class Ui_MainWindow(object):
         #if not self.duplicateFoldersCheckbox.isChecked():
         #    firstInstancesDict = {}    
 
-        namesList = finalNamesList if not self.duplicateFoldersCheckbox.isChecked() else validNamesList
+        namesList = finalNamesList if not self.ui.duplicateFoldersCheckbox.isChecked() else validNamesList
         
-        if not self.duplicateFoldersCheckbox.isChecked(): 
+        if not self.ui.duplicateFoldersCheckbox.isChecked(): 
             for name in namesList:
                 nameFromDict = validNamesDict[name.lower()][0]
                 if type(nameFromDict) == list:
@@ -457,34 +463,35 @@ class Ui_MainWindow(object):
 
     def openNameListFile(self):
         #print("open")
-        self.folderNames.clear()
+        """ To provide an option for """ #self.ui.folderNames.clear()
         fileToOpen = QtWidgets.QFileDialog.getOpenFileName(
-            MainWindow, 
+            self, 
             "Open Name List Text File",
-            self.directoryTextbox.text(),
+            self.ui.directoryTextbox.text(),
             "Text Files (*.txt)"
         )
         if (fileToOpen[0] != ""):
             with open(fileToOpen[0], "r") as fileContents:
                 for name in fileContents:
                     #print(name.strip("\n"))
-                    self.folderNames.appendPlainText(name.strip("\n"))
+                    self.ui.folderNames.appendPlainText(name.strip("\n"))
             fileContents.close()
 
     def saveNameListFile(self):
         #print("save")
         fileToSave = QtWidgets.QFileDialog.getSaveFileName(
-            MainWindow, 
+            self, 
             "Save Name List Text File",
-            self.directoryTextbox.text(),
+            self.ui.directoryTextbox.text(),
             "Text Files (*.txt)"
         )
         if (fileToSave[0] != ""):
             with open(fileToSave[0], "w") as fileContents:
-                folderNames = self.folderNames.toPlainText()
+                folderNames = self.ui.folderNames.toPlainText()
                 #print(folderNames)
                 fileContents.write(folderNames)
             fileContents.close()
+
 
 class Ui_CaseStyleWindow(object):
     def setupUi(self, CaseStyleWindow):
@@ -549,12 +556,10 @@ class CaseStyleWindowConnector(QtWidgets.QDialog, Ui_CaseStyleWindow):
         self.selectedCase = ""
         #print("No item chosen:")
         QtWidgets.QDialog.close(self)
-    
+
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon(os.path.join(basedir, 'images', 'app_logo.ico')))
-    MainWindow = QtWidgets.QMainWindow()
-    ui = Ui_MainWindow()
-    ui.setupUi(MainWindow)
-    MainWindow.show()
+    myapp = MainWindow()
+    myapp.show()
     sys.exit(app.exec_())
