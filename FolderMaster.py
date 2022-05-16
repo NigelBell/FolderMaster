@@ -144,6 +144,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.directory = self.ui.directoryTextbox.text()
     
     def openWindow(self, namecases):
         w = CaseStyleWindowConnector(namecases)
@@ -163,12 +164,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def createFolders(self):
         #print("Current directory content", os.listdir())
-        self.directory = self.ui.directoryTextbox.text()
         if self.directory == "":
-            dialog = QtWidgets.QMessageBox.question(
+            QtWidgets.QMessageBox.question(
                 self, 
                 'No Source Folder',
                 "Please provide a source folder",
+                QtWidgets.QMessageBox.Ok
+            )
+            return
+        if not os.path.exists(self.directory):
+            QtWidgets.QMessageBox.question(
+                self, 
+                'Folder does not exist',
+                "Please provide an existing source folder",
                 QtWidgets.QMessageBox.Ok
             )
             return
