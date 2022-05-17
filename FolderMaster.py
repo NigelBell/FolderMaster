@@ -287,24 +287,25 @@ class MainWindow(QtWidgets.QMainWindow):
             namecaseSet = set(leadingNamecaseList)
 
             validNamesDict[key] = []
-
+            
+            print(namecaseSet)
             if len(namecaseSet) > 1:
                 chosenNamecase = self.openWindow(namecaseSet)
                 #print("chosenNamecase", chosenNamecase)
                 if chosenNamecase != "":
                     #print("case set:", combinedDict[key])
                     for case in originalOrderDict[key]:
-                        #print("case:", case)
+                        print("case:", case)
                         if type(case) == list:
                             case[0] = chosenNamecase
                             #print("updatedCase:", case)
                             validNamesList.append(case)
-                            #print("1", case)
+                            print("A1", case)
                             validNamesDict[key].append(case)
                             validLeadingNamesList.append(case[0])
                         else:
                             validNamesList.append(chosenNamecase)
-                            #print("2", chosenNamecase)
+                            print("A2", chosenNamecase)
                             validNamesDict[key].append(chosenNamecase)
                             validLeadingNamesList.append(chosenNamecase)
                     chosenNamecasesList.append(chosenNamecase)
@@ -314,19 +315,20 @@ class MainWindow(QtWidgets.QMainWindow):
                 #print("chosenNamecase", chosenNamecase)
                 #print(namecaseList, len(namecaseList))
                 #for i in range(len(namecaseList)):
-                if type(chosenNamecase) == list:
-                    #print("updatedCase:", case)
-                    validNamesList.append(chosenNamecase)
-                    #print("3", chosenNamecase)
-                    validNamesDict[key].append(chosenNamecase)
-                    validLeadingNamesList.append(chosenNamecase[0])
-                    chosenNamecase = chosenNamecase[0]
-                else:
-                    validNamesList.append(chosenNamecase)
-                    #print("4", chosenNamecase)
-                    validNamesDict[key].append(chosenNamecase)
-                    validLeadingNamesList.append(chosenNamecase)
-                chosenNamecasesList.append(chosenNamecase)
+                for case in originalOrderDict[key]:
+                    if type(chosenNamecase) == list:
+                        #print("updatedCase:", case)
+                        validNamesList.append(chosenNamecase)
+                        print("A3", chosenNamecase)
+                        validNamesDict[key].append(chosenNamecase)
+                        validLeadingNamesList.append(chosenNamecase[0])
+                        chosenNamecase = chosenNamecase[0]
+                    else:
+                        validNamesList.append(chosenNamecase)
+                        print("A4", chosenNamecase)
+                        validNamesDict[key].append(chosenNamecase)
+                        validLeadingNamesList.append(chosenNamecase)
+                    chosenNamecasesList.append(chosenNamecase)
             #print("chosenNamecasesList", chosenNamecasesList)
             if chosenNamecase != "":
                 chosenNamecasesDict[chosenNamecase.lower()] = chosenNamecase
@@ -374,46 +376,69 @@ class MainWindow(QtWidgets.QMainWindow):
         print("cumulativeCounterList:", cumulativeCounterList)
 
         finalNamesList = []
-        for item in chosenNamecasesList: #validNamesSet:
+        for item in validNamesDict.keys(): #chosenNamecasesList:
             if(
                 self.ui.duplicateFoldersCheckbox.isChecked() 
                 and counterList[item] > 0
             ):
+                print("item:", item)
                 if(item not in os.listdir(self.directory)):
                     currentValidName = validNamesList[len(finalNamesList)]
                     if type(currentValidName) == list:
                         currentValidName[0] = item
-                        print("1", currentValidName)
+                        print("B1", currentValidName)
                         finalNamesList.append(currentValidName)
                     else:
-                        print("2", currentValidName)
+                        print("B2", currentValidName)
                         finalNamesList.append(item)
                     for i in range(2, counterList[item] + 1): 
                         newItem = item + " " + "(Copy " + str(i + cumulativeCounterList[item] - 1) + ")"
                         currentValidName = validNamesList[len(finalNamesList)]
                         if type(currentValidName) == list:
                             currentValidName[0] = newItem
-                            print("3", currentValidName)
+                            print("B3", currentValidName)
                             finalNamesList.append(currentValidName)
                         else:
                             currentValidName = validNamesList[len(finalNamesList)] = newItem
-                            print("4", currentValidName)
+                            print("B4", currentValidName)
                             finalNamesList.append(currentValidName)
                 else:
                     for i in range(1, counterList[item] + 1):
                         newItem = item + " " + "(Copy " + str(i + cumulativeCounterList[item]) + ")"
+                        print(newItem)
+                        print(validNamesList, finalNamesList)
                         currentValidName = validNamesList[len(finalNamesList)]
                         if type(currentValidName) == list:
                             currentValidName[0] = newItem
-                            print("5", currentValidName)
+                            print("B5", currentValidName)
                             finalNamesList.append(currentValidName)
                         else:
                             currentValidName = validNamesList[len(finalNamesList)] = newItem
-                            print("6", currentValidName)
+                            print("B6", currentValidName)
                             finalNamesList.append(currentValidName)
             else:
                 finalNamesList.append(item)
                 #print(len(finalNamesList))
+
+        """
+        finalNamesList = []
+        for item in chosenNamecasesList: #validNamesSet:
+            if((
+                self.duplicateFoldersCheckbox.isChecked() 
+                and counterList[item] > 0
+            )):
+                print("item:", item)
+                if(item not in os.listdir(self.directory)):
+                    finalNamesList.append(item)
+                    for i in range(2, counterList[item] + 1):
+                        finalNamesList.append(item + " " + "(Copy " + str(i + cumulativeCounterList[item] - 1) + ")")
+                else:
+                    for i in range(1, counterList[item] + 1):
+                        finalNamesList.append(item + " " + "(Copy " + str(i + cumulativeCounterList[item]) + ")")
+            else:
+                finalNamesList.append(item)
+        """
+
         """
         for i in range(len(validNamesList)):
             if validNamesList[i] == finalNamesList[i]:
@@ -500,7 +525,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 fileContents.write(folderNames)
             fileContents.close()
 
-
 class Ui_CaseStyleWindow(object):
     def setupUi(self, CaseStyleWindow):
         CaseStyleWindow.setObjectName("CaseStyleWindow")
@@ -537,8 +561,7 @@ class CaseStyleWindowConnector(QtWidgets.QDialog, Ui_CaseStyleWindow):
         self.setupUi(self)
         self.namecases = namecases
         self.selectedCase = ""
-
-        self.listWidget.addItems(self.namecases)
+        self.listWidget.addItems(sorted(self.namecases, key=str.swapcase))
         self.listWidget.itemSelectionChanged.connect(self.selectionChanged)
         self.buttonBox.accepted.connect(self.closeWithCaseStyle)
         self.buttonBox.rejected.connect(self.closeWithoutCaseStyle)
@@ -554,7 +577,7 @@ class CaseStyleWindowConnector(QtWidgets.QDialog, Ui_CaseStyleWindow):
             QtWidgets.QDialog.close(self)
         else:
             QtWidgets.QMessageBox.question(
-                MainWindow, 
+                self, 
                 'No Case Style Selected',
                 "Please select a case style. If you don't want any case, click 'Cancel'",
                 QtWidgets.QMessageBox.Ok
