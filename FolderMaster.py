@@ -147,7 +147,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.directory = self.ui.directoryTextbox.text()
     
     def openWindow(self, namecases):
-        w = CaseStyleWindowConnector(namecases)
+        w = CaseStyleWindow(namecases)
         w.exec_()
         return w.selectedCase
 
@@ -554,25 +554,26 @@ class Ui_CaseStyleWindow(object):
         self.chooseCasesLabel.setText(_translate("CaseStyleWindow", "Choose the case style to use:"))
         self.cancelLabel.setText(_translate("CaseStyleWindow", "Click \'Cancel\' in order to use none of them."))
 
-class CaseStyleWindowConnector(QtWidgets.QDialog, Ui_CaseStyleWindow):
+class CaseStyleWindow(QtWidgets.QDialog):
     def __init__(self, namecases):
         #super(Ui_CaseStyleWindow, self).__init__()
-        super(CaseStyleWindowConnector, self).__init__()
-        self.setupUi(self)
+        super(CaseStyleWindow, self).__init__()
+        self.ui = Ui_CaseStyleWindow()
+        self.ui.setupUi(self)
         self.namecases = namecases
         self.selectedCase = ""
-        self.listWidget.addItems(sorted(self.namecases, key=str.swapcase))
-        self.listWidget.itemSelectionChanged.connect(self.selectionChanged)
-        self.buttonBox.accepted.connect(self.closeWithCaseStyle)
-        self.buttonBox.rejected.connect(self.closeWithoutCaseStyle)
+        self.ui.listWidget.addItems(sorted(self.namecases, key=str.swapcase))
+        self.ui.listWidget.itemSelectionChanged.connect(self.selectionChanged)
+        self.ui.buttonBox.accepted.connect(self.closeWithCaseStyle)
+        self.ui.buttonBox.rejected.connect(self.closeWithoutCaseStyle)
 
     def selectionChanged(self):
-        self.selectedCase = self.listWidget.currentItem().text()
+        self.selectedCase = self.ui.listWidget.currentItem().text()
         #print("Selected item:", self.selectedCase)
 
     def closeWithCaseStyle(self):
         if self.selectedCase != "":
-            self.selectedCase = self.listWidget.currentItem().text()
+            self.selectedCase = self.ui.listWidget.currentItem().text()
             #print("Chosen item:", self.selectedCase)
             QtWidgets.QDialog.close(self)
         else:

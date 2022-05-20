@@ -24,6 +24,29 @@ class FolderMasterTest(unittest.TestCase):
         self.expectedOutput = []
         self.actualOutput = []
     
+    def step_chooseCases(self):
+        for item in self.input:
+            if item.lower() not in self.caseListDict:
+                self.caseListDict[item.lower()] = [item]
+            else:
+                self.caseListDict[item.lower()].append(item)
+        print(self.caseListDict.keys())
+        for key in self.caseListDict.keys():
+            namecases = set(self.caseListDict[key])
+            print("namecases", namecases)
+            if (len(namecases) > 1):
+                if (key in self.chosenCases):
+                    choice = self.chosenCases[key]
+                    w = FolderMaster.CaseStyleWindow(namecases)
+                    for i in range(len(namecases)):
+                        if(w.ui.listWidget.item(i).text() == choice):
+                            chosenItem = w.ui.listWidget.item(i)
+                            rect = w.ui.listWidget.visualItemRect(chosenItem)
+                            QtTest.QTest.mouseClick(w.ui.listWidget.viewport(), QtCore.Qt.LeftButton, pos = rect.center())
+                            print("selectedCase", w.selectedCase)
+                            self.revisedInput += [w.selectedCase] * len(self.caseListDict[key])
+            else:
+                self.revisedInput += list(namecases) * len(self.caseListDict[key])
     def step_createFolders(self, input):
         for name in input:
             self.form.ui.folderNames.appendPlainText(name)
@@ -41,6 +64,7 @@ class FolderMasterTest(unittest.TestCase):
             shutil.rmtree(self.unitTestDirectory + "//" +  name[0])
         self.actualOutput = os.listdir(self.unitTestDirectory)
 
+    """
     def test_basic_createFolder(self):
         self.input = ["a"]
         #create the folders
@@ -52,7 +76,6 @@ class FolderMasterTest(unittest.TestCase):
         #remove the folders
         self.step_removeFolders()
         self.assertEqual(self.actualOutput, [])
-    
     def test_basic_createCumulativeDuplicates(self):
         self.input = ["a", "a"]
         #tick the checkbox
@@ -67,7 +90,6 @@ class FolderMasterTest(unittest.TestCase):
         #remove the folders
         self.step_removeFolders()
         self.assertEqual(self.actualOutput, [])
-
     def test_basic_createMultiLevelFolder(self):
         self.input = ["a//a"]
         #create the folders
@@ -79,23 +101,26 @@ class FolderMasterTest(unittest.TestCase):
         #remove the folders
         self.step_removeFolders()
         self.assertEqual(self.actualOutput, [])
-    
     """
     def test_basic_conflictingCases(self):
-        self.input = ["AA", "aa", "Aa"]
+        self.input = ["AA", "aa", "Aa"] 
+        self.revisedInput = []
         #choose the cases
-        chosenCases = ""
-
+        self.caseListDict = {}
+        self.chosenCases = {"aa": "Aa"}
+        self.step_chooseCases()
+        print(self.revisedInput)
         #create the folders
-        self.step_createFolders(self.input)
+        self.step_createFolders(self.revisedInput)
         #check expected result vs actual result
-        self.expectedOutput = [["aa"]]
+        self.expectedOutput = [["Aa"]]
         self.step_getActualOutput()
         self.assertEqual(self.expectedOutput, self.actualOutput)
         #remove folder
         self.step_removeFolders()
         self.assertEqual(self.actualOutput, [])
-    """
+    
+    
 if __name__ == "__main__":
     #Supress non unittest output:
     #suppress_text = io.StringIO()
