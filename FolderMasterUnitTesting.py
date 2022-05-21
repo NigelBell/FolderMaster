@@ -11,29 +11,41 @@ app = QtWidgets.QApplication(sys.argv)
 class FolderMasterTest(unittest.TestCase):
     def setUp(self):
         self.form = FolderMaster.MainWindow()
+        self.input = []
         self.baseDirectory = str(os.getcwd()[0].upper()) + str(os.getcwd()[1:])
         self.createButton = self.form.ui.createButton
         unitTestFolderName = "UnitTestFolder"
         self.unitTestDirectory = self.baseDirectory + "\\" + unitTestFolderName
         self.form.directory = self.unitTestDirectory
-        if not os.path.exists(self.baseDirectory + "\\" + unitTestFolderName):
+        if not os.path.exists(self.unitTestDirectory):
             os.mkdir(self.unitTestDirectory)
-        #print("Before", self.form.ui.directoryTextbox.text())
+        if len(os.listdir(self.unitTestDirectory)) > 0:
+            for name in os.listdir(self.unitTestDirectory):
+                shutil.rmtree(self.unitTestDirectory + "//" +  name[0])
         self.form.ui.directoryTextbox.setText(self.unitTestDirectory)
-        #print("After", self.form.ui.directoryTextbox.text())
         self.expectedOutput = []
         self.actualOutput = []
-    
+    def suppressNonTestOutput(self, method, input = None):
+        suppress_text = io.StringIO()
+        sys.stdout = suppress_text
+        if method == self.step_createFolders:
+            method(input)
+        if method == self.step_chooseCases:
+            method()
+        sys.stdout = sys.__stdout__
+    def step_openTestCasesFile(self, testCasesFile):
+        with open(testCasesFile, "r") as fileContents:
+            for name in fileContents:
+                self.input.append(name.strip("\n"))
+        fileContents.close()
     def step_chooseCases(self):
         for item in self.input:
             if item.lower() not in self.caseListDict:
                 self.caseListDict[item.lower()] = [item]
             else:
                 self.caseListDict[item.lower()].append(item)
-        print(self.caseListDict.keys())
         for key in self.caseListDict.keys():
             namecases = set(self.caseListDict[key])
-            print("namecases", namecases)
             if (len(namecases) > 1):
                 if (key in self.chosenCases):
                     choice = self.chosenCases[key]
@@ -43,7 +55,6 @@ class FolderMasterTest(unittest.TestCase):
                             chosenItem = w.ui.listWidget.item(i)
                             rect = w.ui.listWidget.visualItemRect(chosenItem)
                             QtTest.QTest.mouseClick(w.ui.listWidget.viewport(), QtCore.Qt.LeftButton, pos = rect.center())
-                            print("selectedCase", w.selectedCase)
                             self.revisedInput += [w.selectedCase] * len(self.caseListDict[key])
             else:
                 self.revisedInput += list(namecases) * len(self.caseListDict[key])
@@ -64,62 +75,118 @@ class FolderMasterTest(unittest.TestCase):
             shutil.rmtree(self.unitTestDirectory + "//" +  name[0])
         self.actualOutput = os.listdir(self.unitTestDirectory)
 
-    """
-    def test_basic_createFolder(self):
+    def test_basic1_createFolder(self):
         self.input = ["a"]
-        #create the folders
-        self.step_createFolders(self.input)
-        #check expected result vs actual result
         self.expectedOutput = [["a"]]
+        #create the folders
+        self.suppressNonTestOutput(
+            self.step_createFolders,
+            self.input
+        )
+        #check expected result vs actual result
         self.step_getActualOutput()
         self.assertEqual(self.expectedOutput, self.actualOutput)
         #remove the folders
         self.step_removeFolders()
         self.assertEqual(self.actualOutput, [])
-    def test_basic_createCumulativeDuplicates(self):
+    def test_basic2_createCumulativeDuplicates(self):
         self.input = ["a", "a"]
+        self.expectedOutput = [["a"], ["a (Copy 1)"]]
         #tick the checkbox
         QtTest.QTest.mouseClick(self.form.ui.duplicateFoldersCheckbox, QtCore.Qt.LeftButton)
-        print(self.form.ui.duplicateFoldersCheckbox.isChecked())
         #create the folders
-        self.step_createFolders(self.input)
+        self.suppressNonTestOutput(
+            self.step_createFolders,
+            self.input
+        )
         #check expected result vs actual result
-        self.expectedOutput = [["a"], ["a (Copy 1)"]]
         self.step_getActualOutput()
         self.assertEqual(self.expectedOutput, self.actualOutput)
         #remove the folders
         self.step_removeFolders()
         self.assertEqual(self.actualOutput, [])
-    def test_basic_createMultiLevelFolder(self):
+    def test_basic3_createMultiLevelFolder(self):
         self.input = ["a//a"]
-        #create the folders
-        self.step_createFolders(self.input)
-        #check expected result vs actual result
         self.expectedOutput = [["a", "a"]]
+        #create the folders
+        self.suppressNonTestOutput(
+            self.step_createFolders,
+            self.input
+        )
+        #check expected result vs actual result
         self.step_getActualOutput()
         self.assertEqual(self.expectedOutput, self.actualOutput)
         #remove the folders
         self.step_removeFolders()
         self.assertEqual(self.actualOutput, [])
-    """
-    def test_basic_conflictingCases(self):
+    def test_basic4_conflictingCases(self):
         self.input = ["AA", "aa", "Aa"] 
+        self.chosenCases = {"aa": "Aa"}
+        self.expectedOutput = [["Aa"]]
         self.revisedInput = []
         #choose the cases
         self.caseListDict = {}
-        self.chosenCases = {"aa": "Aa"}
-        self.step_chooseCases()
-        print(self.revisedInput)
+        self.suppressNonTestOutput(
+            self.step_chooseCases
+        )
         #create the folders
-        self.step_createFolders(self.revisedInput)
+        self.suppressNonTestOutput(
+            self.step_createFolders,
+            self.revisedInput
+        )
         #check expected result vs actual result
-        self.expectedOutput = [["Aa"]]
         self.step_getActualOutput()
         self.assertEqual(self.expectedOutput, self.actualOutput)
         #remove folder
         self.step_removeFolders()
         self.assertEqual(self.actualOutput, [])
     
+    #TEST SET 1: periods tests
+    def test_testcase1a_periodsTestWithoutDuplicates(self):
+        testCasesFile = "tests/z_testcases1.txt"
+        self.step_openTestCasesFile(testCasesFile)
+        self.expectedOutput = [[".a"], ["a"], ["a a"], ["a.a"]]
+        self.revisedInput = []
+        #choose the cases
+        self.caseListDict = {}
+        self.suppressNonTestOutput(
+            self.step_chooseCases
+        )
+        #create the folders
+        self.suppressNonTestOutput(
+            self.step_createFolders,
+            self.revisedInput
+        )
+        #check expected result vs actual result
+        self.step_getActualOutput()
+        self.assertEqual(self.expectedOutput, self.actualOutput)
+        #remove folder
+        self.step_removeFolders()
+        self.assertEqual(self.actualOutput, [])
+    def test_testcase1b_periodsTestWithDuplicates(self):
+        testCasesFile = "tests/z_testcases1.txt"
+        self.step_openTestCasesFile(testCasesFile)
+        self.expectedOutput = [[".a"], ["a"], ["a (Copy 1)"], ["a (Copy 2)"], ["a (Copy 3)"], ["a a"], ["a.a"]]
+        self.revisedInput = []
+        #tick the checkbox
+        QtTest.QTest.mouseClick(self.form.ui.duplicateFoldersCheckbox, QtCore.Qt.LeftButton)
+        #choose the cases
+        self.caseListDict = {}
+        self.suppressNonTestOutput(
+            self.step_chooseCases
+        )
+        #create the folders
+        self.suppressNonTestOutput(
+            self.step_createFolders,
+            self.revisedInput
+        )
+        #check expected result vs actual result
+        self.step_getActualOutput()
+        self.assertEqual(self.expectedOutput, self.actualOutput)
+        #remove folder
+        self.step_removeFolders()
+        self.assertEqual(self.actualOutput, [])
+
     
 if __name__ == "__main__":
     #Supress non unittest output:
