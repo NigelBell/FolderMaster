@@ -1,10 +1,6 @@
 Aa
-AA
-aa
-Ab
-ab
+Ab/a
 AB
-?AB
 AC
-AC
-AC
+Ac/a
+Ad/a

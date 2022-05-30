@@ -145,7 +145,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.directory = self.ui.directoryTextbox.text()
-    
+
     def openWindow(self, namecases):
         w = CaseStyleWindow(namecases)
         w.exec_()
@@ -162,8 +162,59 @@ class MainWindow(QtWidgets.QMainWindow):
         folder = folder.replace("/", "\\")
         self.ui.directoryTextbox.setText(folder)
 
+    def folderFormattingAndReserveHandling(self, currentLine):
+        ###print("a", currentLine)
+        isSublist = False
+        ##print("4", currentLine)
+        #print("before currentLine", currentLine)
+        if currentLine[0] in ["/"] or currentLine[-1] in ["/"]:
+            #print("With:", currentLine)
+            currentLine = currentLine.strip("/")
+            #print("Without:", currentLine)
+        if currentLine[0] in ["\\"] or currentLine[-1] in ["\\"]:
+            #print("With:", currentLine)
+            currentLine = currentLine.strip("\\")
+            #print("Without:", currentLine)
+        ###print("b", currentLine)
+        #print("after currentLine", currentLine)
+        #Split into subfolders
+        if any(char in currentLine for char in subfolderDividers):
+            isSublist = True
+            currentLine = re.split("[/\\\\]+", currentLine)
+        ###print("c", currentLine)
+        ##print("5", currentLine)
+        #NOTE: Maybe handle cancellations
+        #NOTE: Collect/report faulty names (maybe via colour coding)
+        if type(currentLine) == list:
+            for folder in currentLine:
+                if folder[-1] == ".":
+                    #print("With:", currentLine)
+                    folder = folder.rstrip(".")
+                    #print("Without:", currentLine)
+                if folder.upper() in reservedFileNames: #don't add them
+                    #print("Reserved File Name:", currentLine)
+                    return False
+                if any(char in folder for char in reservedCharacters):
+                    #print("Contains reserved characters:", currentLine)
+                    return False
+            ###print("da", currentLine)
+            return currentLine
+        else:
+            if currentLine[-1] == ".":
+                #print("With:", currentLine)
+                currentLine = currentLine.rstrip(".")
+                #print("Without:", currentLine)
+            if currentLine.upper() in reservedFileNames: #don't add them
+                #print("Reserved File Name:", currentLine)
+                return False
+            if any(char in currentLine for char in reservedCharacters):
+                #print("Contains reserved characters:", currentLine)
+                return False
+            ###print("db", currentLine)
+            return currentLine
+
     def createFolders(self):
-        #print("Current directory content", os.listdir())
+        self.directory = self.ui.directoryTextbox.text()
         if self.directory == "":
             QtWidgets.QMessageBox.question(
                 self, 
@@ -186,6 +237,7 @@ class MainWindow(QtWidgets.QMainWindow):
             for x in rawNamesList.split("\n") 
             if x.strip()
         ]
+        print("despacedNamesList", despacedNamesList)
         #print(despacedNamesList)
         validNamesList = []
         validLeadingNamesList = []
@@ -197,44 +249,21 @@ class MainWindow(QtWidgets.QMainWindow):
         for i in range(len(despacedNamesList)): #Windows filename properties
             isSublist = False
             currentName = despacedNamesList[i]
-            #print(currentName)
-
-            if currentName[0] in ["/"] or currentName[-1] in ["/"]:
-                #print("With:", currentName)
-                currentName = currentName.strip("/")
-                #print("Without:", currentName)
-            if currentName[0] in ["\\"] or currentName[-1] in ["\\"]:
-                #print("With:", currentName)
-                currentName = currentName.strip("\\")
-                #print("Without:", currentName)
-            
-            #Note: Maybe handle cancelations
-            if currentName[-1] == ".":
-                #print("With:", currentName)
-                currentName = currentName.rstrip(".")
-                #print("Without:", currentName)
-            
-            #NOTE: Collect faulty names
-            if currentName.upper() in reservedFileNames: #don't add them
-                #print("Reserved File Name:", currentName)
-                continue
-            if any(char in currentName for char in reservedCharacters):
-                #print("Contains reserved characters:", currentName)
-                continue
-
             if any(char in currentName for char in subfolderDividers):
                 isSublist = True
-            
-            if isSublist:
-                subfolders = re.split("[/\\\\]+", currentName)
-                #subfoldersList.append(subfolders)
-                currentName = subfolders[0]
-                if currentName.lower() not in originalOrderDict:
-                    originalOrderDict[currentName.lower()] = []
-                if currentName.lower() not in subfoldersDict:
-                    subfoldersDict[currentName.lower()] = []
-                subfoldersDict[currentName.lower()].append(subfolders)
-                originalOrderDict[currentName.lower()].append(subfolders)
+                currentName = re.split("[/\\\\]+", currentName)
+            currentName = self.folderFormattingAndReserveHandling(currentName)
+            if currentName == False:
+                continue
+
+            #final steps:
+            if type(currentName) == list:
+                if currentName[0].lower() not in originalOrderDict:
+                    originalOrderDict[currentName[0].lower()] = []
+                if currentName[0].lower() not in subfoldersDict:
+                    subfoldersDict[currentName[0].lower()] = []
+                subfoldersDict[currentName[0].lower()].append(currentName)
+                originalOrderDict[currentName[0].lower()].append(currentName)
             else:
                 if currentName.lower() not in originalOrderDict:
                     originalOrderDict[currentName.lower()] = []
@@ -242,7 +271,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     letterCasesDict[currentName.lower()] = []
                 letterCasesDict[currentName.lower()].append(currentName)
                 originalOrderDict[currentName.lower()].append(currentName)
-        
+        print("DONE")
+        #return "a"
         orderedLetterCasesDict = collections.OrderedDict(sorted(letterCasesDict.items()))
         keyUnionSet = set(orderedLetterCasesDict.keys()).union(set(subfoldersDict.keys()))
         keyUnionDict = collections.OrderedDict.fromkeys(sorted(keyUnionSet), None)
@@ -288,7 +318,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             validNamesDict[key] = []
             
-            print(namecaseSet)
+            #print(namecaseSet)
             if len(namecaseSet) > 1:
                 chosenNamecase = self.openWindow(namecaseSet)
                 #print("chosenNamecase", chosenNamecase)
@@ -316,16 +346,17 @@ class MainWindow(QtWidgets.QMainWindow):
                 #print(namecaseList, len(namecaseList))
                 #for i in range(len(namecaseList)):
                 for case in originalOrderDict[key]:
-                    if type(chosenNamecase) == list:
+                    chosenNamecase = case
+                    if type(case) == list:
                         #print("updatedCase:", case)
                         validNamesList.append(chosenNamecase)
                         print("A3", chosenNamecase)
                         validNamesDict[key].append(chosenNamecase)
                         validLeadingNamesList.append(chosenNamecase[0])
-                        chosenNamecase = chosenNamecase[0]
+                        chosenNamecase = case[0]
                     else:
                         validNamesList.append(chosenNamecase)
-                        print("A4", chosenNamecase)
+                        #print("A4", chosenNamecase)
                         validNamesDict[key].append(chosenNamecase)
                         validLeadingNamesList.append(chosenNamecase)
                     chosenNamecasesList.append(chosenNamecase)
@@ -376,7 +407,12 @@ class MainWindow(QtWidgets.QMainWindow):
         print("cumulativeCounterList:", cumulativeCounterList)
 
         finalNamesList = []
-        for item in validNamesDict.keys(): #chosenNamecasesList:
+        print( self.ui.duplicateFoldersCheckbox.isChecked() )
+        chosenNamecasesSet = set(chosenNamecasesList)
+        chosenNamecasesSortedList = sorted(list(chosenNamecasesSet))
+        print("validNamesDict.keys()", validNamesDict.keys())
+        print("chosenNamecasesSortedList", chosenNamecasesSortedList)
+        for item in counterList.keys(): #chosenNamecasesList:
             if(
                 self.ui.duplicateFoldersCheckbox.isChecked() 
                 and counterList[item] > 0
@@ -462,7 +498,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #    firstInstancesDict = {}    
 
         namesList = finalNamesList if not self.ui.duplicateFoldersCheckbox.isChecked() else validNamesList
-        
+        print("namesList", namesList)
         if not self.ui.duplicateFoldersCheckbox.isChecked(): 
             for name in namesList:
                 nameFromDict = validNamesDict[name.lower()][0]
@@ -529,6 +565,13 @@ class Ui_CaseStyleWindow(object):
     def setupUi(self, CaseStyleWindow):
         CaseStyleWindow.setObjectName("CaseStyleWindow")
         CaseStyleWindow.resize(300, 420)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(CaseStyleWindow.sizePolicy().hasHeightForWidth())
+        CaseStyleWindow.setSizePolicy(sizePolicy)
+        CaseStyleWindow.setMinimumSize(QtCore.QSize(300, 420))
+        CaseStyleWindow.setMaximumSize(QtCore.QSize(300, 420))
         self.centralwidget = QtWidgets.QWidget(CaseStyleWindow)
         self.centralwidget.setGeometry(QtCore.QRect(0, 0, 300, 418))
         self.centralwidget.setObjectName("centralwidget")
@@ -545,6 +588,7 @@ class Ui_CaseStyleWindow(object):
         self.buttonBox.setGeometry(QtCore.QRect(130, 380, 150, 25))
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
+
         self.retranslateUi(CaseStyleWindow)
         QtCore.QMetaObject.connectSlotsByName(CaseStyleWindow)
 
