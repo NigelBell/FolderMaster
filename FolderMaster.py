@@ -84,6 +84,9 @@ class Ui_MainWindow(object):
         self.directoryTextbox.setText(self.directory)
 
         self.folderNames = QtWidgets.QPlainTextEdit(self.centralwidget)
+        self.folderNames.setTabStopDistance(
+            QtGui.QFontMetricsF(self.folderNames.font()).horizontalAdvance(' ') * 4
+        )
         self.folderNames.setGeometry(QtCore.QRect(20, 109, 364, 331))
         self.folderNames.setObjectName("folderNames")
 

@@ -442,10 +442,6 @@ class FolderMasterTest(unittest.TestCase):
         QtTest.QTest.mouseClick(self.form.ui.duplicateFoldersCheckbox, QtCore.Qt.LeftButton)
         self.stepSet_withoutConflictingNamecases(testCasesFile)
     
-    #FUNCTIONALITY TESTS:
-        #Load (load all the files)
-
-        #Save (save as file all)
         
 
 if __name__ == "__main__":
