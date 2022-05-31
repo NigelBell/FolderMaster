@@ -4,7 +4,7 @@ import re
 import sys
 import shutil
 import unittest
-from PyQt5 import QtGui, QtWidgets, QtTest, QtCore
+from PyQt5 import QtWidgets, QtTest, QtCore
 import FolderMaster
 
 app = QtWidgets.QApplication(sys.argv)
@@ -40,12 +40,13 @@ class FolderMasterTest(unittest.TestCase):
                 return method(input)
             sys.stdout = sys.__stdout__
         else:
-            if method == self.step_createFolders: #or method == self.step_openTestCasesFile:
+            if method == self.step_createFolders:
                 method(input)
             if method == self.step_chooseCases:
                 method()
             if method == self.form.folderFormattingAndReserveHandling:
                 return method(input)
+    
     def step_openTestCasesFile(self, testCasesFile):
         with open(testCasesFile, "r") as fileContents:
             for name in fileContents:
@@ -54,32 +55,23 @@ class FolderMasterTest(unittest.TestCase):
     def step_chooseCases(self):
         namecasesDict = {}
         for item in self.formattedInput:
-            print("item", item)
             if type(item) == list:
                 rootFolder = item[0]
-                print("\t rootFolder", rootFolder)
                 if item[0].lower() not in self.caseListDict:
                     self.caseListDict[rootFolder.lower()] = [item]
-                    print("\t\t rootFolder", rootFolder)
                     namecasesDict[rootFolder.lower()] = set()
                     namecasesDict[rootFolder.lower()].add(rootFolder)
                 else:
                     self.caseListDict[rootFolder.lower()].append(item)
-                    print("\t\t rootFolder", rootFolder)
                     namecasesDict[rootFolder.lower()].add(rootFolder)
             else:
                 if item.lower() not in self.caseListDict:
                     self.caseListDict[item.lower()] = [item]
-                    print("\t\t item", item)
                     namecasesDict[item.lower()] = set()
                     namecasesDict[item.lower()].add(item)
                 else:
                     self.caseListDict[item.lower()].append(item)
-                    print("\t\t item", item)
                     namecasesDict[item.lower()].add(item)
-        print("caseListDict", self.caseListDict)
-        print("namecasesDict", namecasesDict)
-
         chosenNamecasesDict = {}        
         for key in namecasesDict.keys():
             namecases = set(namecasesDict[key])
@@ -97,48 +89,15 @@ class FolderMasterTest(unittest.TestCase):
             else:
                 chosenNamecase = list(namecases)[0]
                 chosenNamecasesDict[chosenNamecase.lower()] = chosenNamecase
-
             for i in range(len(self.caseListDict[key])):
                 case = self.caseListDict[key][i]
                 if type(case) == list:
                     case[0] = chosenNamecasesDict[chosenNamecase.lower()]
                     caseAsString = "//".join(case)
-                    print("caseAsString", caseAsString)
-                    #if self.ui.duplicateFoldersCheckbox.isChecked() == True and i == 0:
-                    #    self.revisedInput.append(caseAsString)
-                    #    break
-                    #else:
                     self.revisedInput.append(caseAsString)
                 else:
-                    #if self.ui.duplicateFoldersCheckbox.isChecked() == True and i == 0:
-                    #    self.revisedInput.append(case)
-                    #    break
-                    #else:
                     case = chosenNamecasesDict[chosenNamecase.lower()]
                     self.revisedInput.append(case)
-                    print("case", case)
-        print(chosenNamecasesDict)
-        print("revisedInput", self.revisedInput)
-
-        """
-        for key in self.caseListDict.keys():
-            namecases = set(namecasesDict[key])
-            if (len(namecases) > 1):
-                if (key in self.chosenCases):
-                    choice = self.chosenCases[key]
-                    w = FolderMaster.CaseStyleWindow(namecases)
-                    for i in range(len(namecases)):
-                        if(w.ui.listWidget.item(i).text() == choice):
-                            chosenItem = w.ui.listWidget.item(i)
-                            rect = w.ui.listWidget.visualItemRect(chosenItem)
-                            QtTest.QTest.mouseClick(w.ui.listWidget.viewport(), QtCore.Qt.LeftButton, pos = rect.center())
-                            self.revisedInput += [w.selectedCase] * len(self.caseListDict[key])
-            else:
-                #print("before", self.revisedInput)
-                self.revisedInput += self.caseListDict[key] #list(namecases) * len(self.caseListDict[key])
-                #print("after", self.revisedInput)
-        """
-        
     def step_createFolders(self, input):
         for name in input:
             self.form.ui.folderNames.appendPlainText(name)
@@ -155,25 +114,18 @@ class FolderMasterTest(unittest.TestCase):
         for name in self.expectedOutput:
             shutil.rmtree(self.unitTestDirectory + "//" +  name[0])
         self.actualOutput = os.listdir(self.unitTestDirectory)
-    
     def stepSet_withoutConflictingNamecases(self, testCasesFile, willSupressMainWindow = True, willSupressCaseStyleWindow = True, willSupressFormatting = True):
-        ##print("2")
         self.step_openTestCasesFile(testCasesFile)
-        print("input", self.input)
-        ##print("3")
         for currentLine in list(self.input):
-            #formattedName = self.form.folderFormattingAndReserveHandling(currentLine)
             formattedName = self.suppressNonTestOutput(
                 self.form.folderFormattingAndReserveHandling,
                 currentLine,
                 willSupress = willSupressFormatting
             )
             if formattedName == False:
-                #self.input.remove(currentLine)
                 continue
             else:
                 self.formattedInput.append(formattedName)
-        print(self.formattedInput) 
         self.revisedInput = []
         #choose the cases
         self.caseListDict = {}
@@ -181,7 +133,6 @@ class FolderMasterTest(unittest.TestCase):
             self.step_chooseCases,
             willSupress = willSupressCaseStyleWindow
         )
-        print("revisedInput", self.revisedInput)
         #create the folders
         self.suppressNonTestOutput(
             self.step_createFolders,
@@ -194,6 +145,19 @@ class FolderMasterTest(unittest.TestCase):
         #remove folder
         self.step_removeFolders()
         self.assertEqual(self.actualOutput, [])
+
+    """
+    #FUNCTIONALITY TEST:
+        #SAVE
+
+        #LOAD
+
+        #CREATE A FOLDER IN OTHER FOLDER
+
+        #CREATE A FOLDER IN OTHER FOLDER, PRESS CREATE TWICE
+
+        #CREATE A FOLDER IN ONE FOLDER, THEN ANOTHER IN ANOTHER FOLDER
+    """
 
     #FOLDER TEST SET 0: basic tests
     def test_basic1_createFolder(self):
@@ -245,9 +209,7 @@ class FolderMasterTest(unittest.TestCase):
         self.chosenCases = {"aa": "Aa"}
         self.expectedOutput = [["Aa"]]
         self.revisedInput = []
-
         for currentLine in list(self.input):
-            #formattedName = self.form.folderFormattingAndReserveHandling(currentLine)
             formattedName = self.suppressNonTestOutput(
                 self.form.folderFormattingAndReserveHandling,
                 currentLine,
@@ -257,7 +219,6 @@ class FolderMasterTest(unittest.TestCase):
                 self.input.remove(currentLine)
             else:
                 self.formattedInput.append(formattedName)
-
         #choose the cases
         self.caseListDict = {}
         self.suppressNonTestOutput(
@@ -371,8 +332,6 @@ class FolderMasterTest(unittest.TestCase):
         testCasesFile = "tests/z_testcases5a.txt"
         self.chosenCases = {"aa": "Aa", "ab": "ab", "abc": "aBc"}
         self.expectedOutput = [["Aa"], ["Aa (Copy 1)"], ["Aa (Copy 2)"], ["ab"], ["ab (Copy 1)"], ["aBc"], ["aBc (Copy 1)"], ["aBc (Copy 2)"], ["aBc (Copy 3)"], ["aBc (Copy 4)"], ["aBc (Copy 5)"], ["aBc (Copy 6)"], ["AC"], ["AC (Copy 1)"], ["AC (Copy 2)"]]
-        #print("expectedOutput", self.expectedOutput)
-        #print("actualOutput", self.actualOutput)
         QtTest.QTest.mouseClick(self.form.ui.duplicateFoldersCheckbox, QtCore.Qt.LeftButton)
         self.stepSet_withoutConflictingNamecases(testCasesFile)
     #5b: duplicate name cases with nested folders
@@ -442,14 +401,12 @@ class FolderMasterTest(unittest.TestCase):
         QtTest.QTest.mouseClick(self.form.ui.duplicateFoldersCheckbox, QtCore.Qt.LeftButton)
         self.stepSet_withoutConflictingNamecases(testCasesFile)
     
-        
-
 if __name__ == "__main__":
     #Supress non unittest output:
-    #suppress_text = io.StringIO()
-    #sys.stdout = suppress_text
-    
+    ##suppress_text = io.StringIO()
+    ##sys.stdout = suppress_text
+
     unittest.main(verbosity=2)
-    
-    #Release non unittest output:
-    #sys.stdout = sys.__stdout__
+
+    ##Release non unittest output:
+    ##sys.stdout = sys.__stdout__
