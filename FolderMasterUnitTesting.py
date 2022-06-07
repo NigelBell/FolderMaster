@@ -19,12 +19,11 @@ class FolderMasterTest(unittest.TestCase):
         self.createButton = self.form.ui.createButton
         unitTestFolderName = "UnitTestFolder"
         self.unitTestDirectory = self.baseDirectory + "\\" + unitTestFolderName
-        self.form.directory = self.unitTestDirectory
         if not os.path.exists(self.unitTestDirectory):
             os.mkdir(self.unitTestDirectory)
         if len(os.listdir(self.unitTestDirectory)) > 0:
             for name in os.listdir(self.unitTestDirectory):
-                shutil.rmtree(self.unitTestDirectory + "//" +  name)
+                shutil.rmtree(self.unitTestDirectory + "//" + name)
         self.form.ui.directoryTextbox.setText(self.unitTestDirectory)
         self.expectedOutput = []
         self.actualOutput = []
@@ -237,17 +236,28 @@ class FolderMasterTest(unittest.TestCase):
         self.step_removeFolders()
         self.assertEqual(self.actualOutput, [])
 
-    #FOLDER TEST SET 1: periods tests
-    def test_testcase1_noDupe(self):
-        testCasesFile = "tests/z_testcases1.txt"
+    #FOLDER TEST SET 1a: periods tests, single letter (a)
+    def test_testcase1a_noDupe(self):
+        testCasesFile = "tests/z_testcases1a.txt"
         self.expectedOutput = [[".a"], ["a"], ["a a"], ["a.a"]]
         self.stepSet_withoutConflictingNamecases(testCasesFile)
-    def test_testcase1_yesDupe(self):
-        testCasesFile = "tests/z_testcases1.txt"
-        self.expectedOutput = [[".a"], ["a"], ["a (Copy 1)"], ["a (Copy 2)"], ["a (Copy 3)"], ["a a"], ["a.a"]]
+    def test_testcase1a_yesDupe(self):
+        testCasesFile = "tests/z_testcases1a.txt"
+        self.expectedOutput = [[".a"], ["a"], ["a (Copy 1)"], ["a (Copy 2)"], ["a (Copy 3)"], ["a (Copy 4)", "a", "a"], ["a (Copy 5)"], ["a a"], ["a.a"]]
         QtTest.QTest.mouseClick(self.form.ui.duplicateFoldersCheckbox, QtCore.Qt.LeftButton)
         self.stepSet_withoutConflictingNamecases(testCasesFile)
-    
+
+    #FOLDER TEST SET 1b: periods tests, a word (apple)
+     def test_testcase1b_noDupe(self):
+        testCasesFile = "tests/z_testcases1b.txt"
+        self.expectedOutput = [[".a"], ["a"], ["a a"], ["a.a"]]
+        self.stepSet_withoutConflictingNamecases(testCasesFile)
+    def test_testcase1b_yesDupe(self):
+        testCasesFile = "tests/z_testcases1b.txt"
+        self.expectedOutput = [[".a"], ["a"], ["a (Copy 1)"], ["a (Copy 2)"], ["a (Copy 3)"], ["a (Copy 4)", "a", "a"], ["a (Copy 5)"], ["a a"], ["a.a"]]
+        QtTest.QTest.mouseClick(self.form.ui.duplicateFoldersCheckbox, QtCore.Qt.LeftButton)
+        self.stepSet_withoutConflictingNamecases(testCasesFile)
+
     #FOLDER TEST SET 2: slashes tests
     #2a: prefixed and suffixed slashes are ignored
     def test_testcase2a_noDupe(self):

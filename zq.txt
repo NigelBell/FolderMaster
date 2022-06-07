@@ -1,0 +1,16 @@
+"""
+#if type(currentLine) == list:
+#    if currentLine[0].lower() not in caseListDict:
+#        caseListDict[currentLine[0].lower()] = []
+#    if currentLine[0].lower() not in subfoldersDict:
+#        subfoldersDict[currentLine[0].lower()] = []
+#    subfoldersDict[currentLine[0].lower()].append(currentLine)
+#    caseListDict[currentLine[0].lower()].append(currentLine)
+#else:
+#    if currentLine.lower() not in caseListDict:
+#        caseListDict[currentLine.lower()] = []
+#    if currentLine.lower() not in letterCasesDict:
+#        letterCasesDict[currentLine.lower()] = []
+#    letterCasesDict[currentLine.lower()].append(currentLine)
+#    caseListDict[currentLine.lower()].append(currentLine)
+"""

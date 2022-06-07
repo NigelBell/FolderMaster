@@ -143,8 +143,32 @@ class MainWindow(QtWidgets.QMainWindow):
             folder = previousDirectoryTextCopy
         folder = folder.replace("/", "\\")
         self.ui.directoryTextbox.setText(folder)
+    def openNameListFile(self):
+        fileToOpen = QtWidgets.QFileDialog.getOpenFileName(
+            self, 
+            "Open Name List Text File",
+            self.ui.directoryTextbox.text(),
+            "Text Files (*.txt)"
+        )
+        if (fileToOpen[0] != ""):
+            with open(fileToOpen[0], "r") as fileContents:
+                for name in fileContents:
+                    self.ui.folderNames.appendPlainText(name.strip("\n"))
+            fileContents.close()
+    def saveNameListFile(self):
+        fileToSave = QtWidgets.QFileDialog.getSaveFileName(
+            self, 
+            "Save Name List Text File",
+            self.ui.directoryTextbox.text(),
+            "Text Files (*.txt)"
+        )
+        if (fileToSave[0] != ""):
+            with open(fileToSave[0], "w") as fileContents:
+                folderNames = self.ui.folderNames.toPlainText()
+                fileContents.write(folderNames)
+            fileContents.close()
+    
     def folderFormattingAndReserveHandling(self, currentLine):
-        #NOTE: Maybe handle cancellations, Collect/report faulty names (maybe via colour coding)
         if currentLine[0] in ["/"] or currentLine[-1] in ["/"]:
             currentLine = currentLine.strip("/")
         if currentLine[0] in ["\\"] or currentLine[-1] in ["\\"]:
@@ -152,15 +176,17 @@ class MainWindow(QtWidgets.QMainWindow):
         if any(char in currentLine for char in subfolderDividers):
             currentLine = re.split("[/\\\\]+", currentLine)
         if type(currentLine) == list:
-            for folder in currentLine:
-                if folder[-1] == ".":
-                    folder = folder.rstrip(".")
-                if folder.upper() in reservedFileNames:
+            for i in range(len(currentLine)):
+                if currentLine[i][-1] == ".":
+                    currentLine[i] = currentLine[i].rstrip(".")
+                if currentLine[i].upper() in reservedFileNames:
                     return False
-                if any(char in folder for char in reservedCharacters):
+                if any(char in currentLine[i] for char in reservedCharacters):
                     return False
             return currentLine
         else:
+            if currentLine == ".":
+                return False
             if currentLine[-1] == ".":
                 currentLine = currentLine.rstrip(".")
             if currentLine.upper() in reservedFileNames:
@@ -186,95 +212,73 @@ class MainWindow(QtWidgets.QMainWindow):
                 QtWidgets.QMessageBox.Ok
             )
             return
-        rawNamesList = self.ui.folderNames.toPlainText()
         despacedNamesList = [
             x.strip()
-            for x in rawNamesList.split("\n") 
+            for x in self.ui.folderNames.toPlainText().split("\n") 
             if x.strip()
         ]
-        validNamesList = []
-        validLeadingNamesList = []
-        originalOrderDict = {}
-        letterCasesDict = {}
-        subfoldersDict = {}
+        print("despacedNamesList", despacedNamesList)
+        
+        caseListDict = {}
+        formattedInput = []
         for i in range(len(despacedNamesList)):
-            currentName = despacedNamesList[i]
-            if any(char in currentName for char in subfolderDividers):
-                currentName = re.split("[/\\\\]+", currentName)
-            currentName = self.folderFormattingAndReserveHandling(currentName)
-            if currentName == False:
+            currentLine = despacedNamesList[i]
+            currentLine = self.folderFormattingAndReserveHandling(currentLine)
+            if currentLine == False:
                 continue
-            if type(currentName) == list:
-                if currentName[0].lower() not in originalOrderDict:
-                    originalOrderDict[currentName[0].lower()] = []
-                if currentName[0].lower() not in subfoldersDict:
-                    subfoldersDict[currentName[0].lower()] = []
-                subfoldersDict[currentName[0].lower()].append(currentName)
-                originalOrderDict[currentName[0].lower()].append(currentName)
             else:
-                if currentName.lower() not in originalOrderDict:
-                    originalOrderDict[currentName.lower()] = []
-                if currentName.lower() not in letterCasesDict:
-                    letterCasesDict[currentName.lower()] = []
-                letterCasesDict[currentName.lower()].append(currentName)
-                originalOrderDict[currentName.lower()].append(currentName)
-        orderedLetterCasesDict = collections.OrderedDict(sorted(letterCasesDict.items()))
-        keyUnionSet = set(orderedLetterCasesDict.keys()).union(set(subfoldersDict.keys()))
-        keyUnionDict = collections.OrderedDict.fromkeys(sorted(keyUnionSet), None)
-        combinedDict = {}
-        combinedNameCases = {}
-        combinedUniqueNameCases = {}
-        chosenNamecasesList = []
+                formattedInput.append(currentLine)
+        print("formattedInput", formattedInput)
+
+        namecasesDict = {}
+        for item in formattedInput:
+            if type(item) == list:
+                rootFolder = item[0]
+                if item[0].lower() not in caseListDict:
+                    caseListDict[rootFolder.lower()] = []
+                    namecasesDict[rootFolder.lower()] = set()
+                caseListDict[rootFolder.lower()].append(item)
+                namecasesDict[rootFolder.lower()].add(rootFolder)
+            else:
+                if item.lower() not in caseListDict:
+                    caseListDict[item.lower()] = []
+                    namecasesDict[item.lower()] = set()
+                caseListDict[item.lower()].append(item)
+                namecasesDict[item.lower()].add(item)
+        print("namecasesDict", namecasesDict)
+        print("caseListDict", caseListDict)
+
         chosenNamecasesDict = {}
-        for key in keyUnionDict.keys():
-            combinedDict[key] = []
-            combinedNameCases[key] = []
-            if key in orderedLetterCasesDict.keys():
-                combinedDict[key].extend(orderedLetterCasesDict[key])
-                combinedNameCases[key].extend(orderedLetterCasesDict[key])
-            if key in subfoldersDict.keys():
-                combinedDict[key].extend(subfoldersDict[key])
-                combinedNameCases[key].extend([a[0] for a in subfoldersDict[key]])
-            combinedUniqueNameCases[key] = set(combinedNameCases[key])
-        validNamesDict = {}
-        for key in originalOrderDict.keys():
-            leadingNamecaseList = combinedNameCases[key]
-            namecaseSet = set(leadingNamecaseList)
-            validNamesDict[key] = []
-            if len(namecaseSet) > 1:
-                chosenNamecase = self.openWindow(namecaseSet)
-                if chosenNamecase != "":
-                    for case in originalOrderDict[key]:
-                        if type(case) == list:
-                            case[0] = chosenNamecase
-                            validNamesList.append(case)
-                            validNamesDict[key].append(case)
-                            validLeadingNamesList.append(case[0])
-                        else:
-                            validNamesList.append(chosenNamecase)
-                            validNamesDict[key].append(chosenNamecase)
-                            validLeadingNamesList.append(chosenNamecase)
-                    chosenNamecasesList.append(chosenNamecase)
+        revisedInputDict = {}
+        uniqueNamesCounterDict = {}
+        for key in namecasesDict.keys():
+            revisedInputDict[key] = []
+            namecases = list(set(namecasesDict[key]))
+            if (len(namecases) > 1):
+                chosenNamecase = self.openWindow(namecases)
+                for namecase in namecases:
+                    if(namecase == chosenNamecase):
+                        chosenNamecasesDict[chosenNamecase.lower()] = chosenNamecase
             else:
-                chosenNamecase = originalOrderDict[key][0]
-                for case in originalOrderDict[key]:
-                    chosenNamecase = case
-                    if type(case) == list:
-                        validNamesList.append(chosenNamecase)
-                        validNamesDict[key].append(chosenNamecase)
-                        validLeadingNamesList.append(chosenNamecase[0])
-                        chosenNamecase = case[0]
-                    else:
-                        validNamesList.append(chosenNamecase)
-                        validNamesDict[key].append(chosenNamecase)
-                        validLeadingNamesList.append(chosenNamecase)
-                    chosenNamecasesList.append(chosenNamecase)
-            if chosenNamecase != "":
+                chosenNamecase = list(namecases)[0]
                 chosenNamecasesDict[chosenNamecase.lower()] = chosenNamecase
-        counterList = collections.Counter(validLeadingNamesList)
+            for i in range(len(caseListDict[key])):
+                case = caseListDict[key][i]
+                if type(case) == list:
+                    case[0] = chosenNamecasesDict[chosenNamecase.lower()]
+                else:
+                    case = chosenNamecasesDict[chosenNamecase.lower()]
+                revisedInputDict[key].append(case)
+            uniqueNamesCounterDict[key] = len(revisedInputDict[key])
+        print("chosenNamecasesDict", chosenNamecasesDict)
+        print("revisedInputDict", revisedInputDict)
+        print("uniqueNamesCounterDict", uniqueNamesCounterDict)
+
         cumulativeList = []
+        print("files before", os.listdir(self.currentDirectory))
         for item in os.listdir(self.currentDirectory):
             if item.lower() in chosenNamecasesDict.keys():
+                cumulativeList.append(item.lower())
                 os.rename(
                     os.path.join(self.currentDirectory, item), 
                     os.path.join(self.currentDirectory, chosenNamecasesDict[item.lower()])
@@ -284,55 +288,68 @@ class MainWindow(QtWidgets.QMainWindow):
             if (parser != []):
                 strippedItem = item.replace(parser[-1], "").strip()
                 if strippedItem.lower() in chosenNamecasesDict.keys():
-                    cumulativeList.append(chosenNamecasesDict[strippedItem.lower()])
+                    cumulativeList.append(chosenNamecasesDict[strippedItem.lower()].lower())
                     os.rename(
                         os.path.join(self.currentDirectory, item), 
                         os.path.join(self.currentDirectory, chosenNamecasesDict[strippedItem.lower()] + " " + parser[-1])
                     )
+        print("files after ", os.listdir(self.currentDirectory))
         cumulativeCounterList = collections.Counter(cumulativeList)
+        print("cumulativeList", cumulativeList)
+        print("cumulativeCounterList", cumulativeCounterList)
+    
         finalNamesList = []
-        for item in counterList.keys():
+        for item in uniqueNamesCounterDict.keys():
             if(
                 self.ui.duplicateFoldersCheckbox.isChecked() 
-                and counterList[item] > 0
+                and uniqueNamesCounterDict[item] > 0
             ):
-                if(item not in os.listdir(self.currentDirectory)):
-                    currentValidName = validNamesList[len(finalNamesList)]
-                    if type(currentValidName) == list:
-                        currentValidName[0] = item
-                        finalNamesList.append(currentValidName)
+                print("many", item)
+                if(chosenNamecasesDict[item] not in os.listdir(self.currentDirectory)):
+                    if type(revisedInputDict[item][0]) == list:
+                        finalNamesList.append(revisedInputDict[item][0])
+                        print("\ta item", revisedInputDict[item][0])
                     else:
-                        finalNamesList.append(item)
-                    for i in range(2, counterList[item] + 1): 
-                        newItem = item + " " + "(Copy " + str(i + cumulativeCounterList[item] - 1) + ")"
-                        currentValidName = validNamesList[len(finalNamesList)]
-                        if type(currentValidName) == list:
-                            currentValidName[0] = newItem
-                            finalNamesList.append(currentValidName)
+                        finalNamesList.append(chosenNamecasesDict[item])
+                        print("\tb item", chosenNamecasesDict[item])
+                    for i in range(1, uniqueNamesCounterDict[item]):
+                        if type(revisedInputDict[item][i]) == list:
+                            newItem = revisedInputDict[item][i][0] + " " + "(Copy " + str(i) + ")"
+                            revisedInputDict[item][i][0] = newItem
                         else:
-                            currentValidName = validNamesList[len(finalNamesList)] = newItem
-                            finalNamesList.append(currentValidName)
+                            newItem = revisedInputDict[item][i] + " " + "(Copy " + str(i) + ")"
+                            revisedInputDict[item][i] = newItem
+                        finalNamesList.append(revisedInputDict[item][i])
+                        print("\titem", revisedInputDict[item][i])
                 else:
-                    for i in range(1, counterList[item] + 1):
-                        newItem = item + " " + "(Copy " + str(i + cumulativeCounterList[item]) + ")"
-                        currentValidName = validNamesList[len(finalNamesList)]
-                        if type(currentValidName) == list:
-                            currentValidName[0] = newItem
-                            finalNamesList.append(currentValidName)
+                    for i in range(0, uniqueNamesCounterDict[item]):
+                        if type(revisedInputDict[item][i]) == list:
+                            print("\titem", revisedInputDict[item][i])
+                            print("\t\tnumber", (i + 1) + cumulativeCounterList[item])
+                            newItem = revisedInputDict[item][i][0] + " " + "(Copy " + str(i + cumulativeCounterList[item]) + ")"
+                            print("\t\tnewItem", newItem)
+                            revisedInputDict[item][i][0] = newItem
+                            print("\t\tresult", revisedInputDict[item][i])
                         else:
-                            currentValidName = validNamesList[len(finalNamesList)] = newItem
-                            finalNamesList.append(currentValidName)
+                            print("\titem", revisedInputDict[item][i])
+                            print("\t\tnumber", (i + 1) + cumulativeCounterList[item])
+                            newItem = revisedInputDict[item][i] + " " + "(Copy " + str(i + cumulativeCounterList[item]) + ")"
+                            print("\t\tnewItem", newItem)
+                            revisedInputDict[item][i] = newItem
+                            print("\t\tresult", revisedInputDict[item][i])
+                        finalNamesList.append(revisedInputDict[item][i])
             else:
-                finalNamesList.append(item)
-        namesList = finalNamesList if not self.ui.duplicateFoldersCheckbox.isChecked() else validNamesList
-        if not self.ui.duplicateFoldersCheckbox.isChecked(): 
-            for name in namesList:
-                nameFromDict = validNamesDict[name.lower()][0]
-                if type(nameFromDict) == list:
+                print("zero", revisedInputDict[item][0])
+                finalNamesList.append(revisedInputDict[item][0])
+        print("finalNamesList", finalNamesList)
+        
+        if not self.ui.duplicateFoldersCheckbox.isChecked():
+            for name in finalNamesList:
+                if type(name) == list:
                     if name in os.listdir(self.currentDirectory):
-                        folderDirectory = os.path.join(self.currentDirectory, nameFromDict[0])
+                        folderDirectory = os.path.join(self.currentDirectory, "\\".join(name))
                         shutil.rmtree(folderDirectory)
-                    os.makedirs(self.currentDirectory + "\\" + "\\".join(nameFromDict))
+                    os.makedirs(self.currentDirectory + "\\" + "\\".join(name))
                 else:
                     if name in os.listdir(self.currentDirectory):
                         folderDirectory = os.path.join(self.currentDirectory, name)
@@ -340,38 +357,14 @@ class MainWindow(QtWidgets.QMainWindow):
                             shutil.rmtree(folderDirectory)
                         else:
                             continue
-                    os.mkdir(self.currentDirectory + "\\" + validNamesDict[name.lower()][0])
+                    os.mkdir(self.currentDirectory + "\\" + name)
         else:
-            for name in namesList:
+            for name in finalNamesList:
                 if type(name) == list:
                     os.makedirs(self.currentDirectory + "\\" + "\\".join(name))
                 else: 
                     os.mkdir(self.currentDirectory + "\\" + name)
-    def openNameListFile(self):
-        fileToOpen = QtWidgets.QFileDialog.getOpenFileName(
-            self, 
-            "Open Name List Text File",
-            self.ui.directoryTextbox.text(),
-            "Text Files (*.txt)"
-        )
-        if (fileToOpen[0] != ""):
-            with open(fileToOpen[0], "r") as fileContents:
-                for name in fileContents:
-                    self.ui.folderNames.appendPlainText(name.strip("\n"))
-            fileContents.close()
-    def saveNameListFile(self):
-        fileToSave = QtWidgets.QFileDialog.getSaveFileName(
-            self, 
-            "Save Name List Text File",
-            self.ui.directoryTextbox.text(),
-            "Text Files (*.txt)"
-        )
-        if (fileToSave[0] != ""):
-            with open(fileToSave[0], "w") as fileContents:
-                folderNames = self.ui.folderNames.toPlainText()
-                fileContents.write(folderNames)
-            fileContents.close()
-
+    
 class Ui_CaseStyleWindow(object):
     def setupUi(self, CaseStyleWindow):
         CaseStyleWindow.setObjectName("CaseStyleWindow")
