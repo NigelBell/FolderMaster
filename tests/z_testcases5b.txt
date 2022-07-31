@@ -1,0 +1,13 @@
+Aa/a
+AA/a
+aa/a
+Ab/a
+ab/a
+AB/a
+?AB/a
+AC/a
+AC/a
+AC/a
+Aa/a/a
+ab/a/a
+AC/a/a
