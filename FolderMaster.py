@@ -7,20 +7,12 @@ import shutil
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 basedir = os.path.dirname(__file__)
-"""
-try:
-    from ctypes import windll  # Only exists on Windows.
-    myappid = 'mycompany.myproduct.subproduct.version'
-    windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
-except ImportError:
-    pass
-"""
-
 reservedCharacters = []
 subfolderDividers = []
 reservedFileNames = []
 if platform.system() == "Windows":
-    reservedCharacters = ["<", ">", ":", "|", "?", "*"] #Note: "\" and "/" are also reserved, but are used to create subfolders.
+    #Note that "\" and "/" are also reserved character, but are used to create subfolders.
+    reservedCharacters = ["<", ">", ":", "|", "?", "*"] 
     subfolderDividers = ["\\", "/"]
     reservedFileNames = [
         "CON", 
@@ -33,6 +25,10 @@ if platform.system() == "Windows":
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         self.originalDirectory = str(os.getcwd()[0].upper()) + str(os.getcwd()[1:])
+        if platform.system() == "Windows":
+            if os.getenv("FolderMasterFolderContextMenuEnvVar") is not None:
+                self.originalDirectory += "\\" + os.getenv("FolderMasterFolderContextMenuEnvVar")
+                os.system("setx FolderMasterFolderContextMenuEnvVar \"\" & \"%FolderMasterInstallDir%\\refreshenv\"")
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(400, 520)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
@@ -60,6 +56,7 @@ class Ui_MainWindow(object):
         self.directoryTextbox.setObjectName("directoryTextbox")
         self.directoryTextbox.setText(self.originalDirectory)
         self.folderNames = QtWidgets.QPlainTextEdit(self.centralwidget)
+        #This sets the tab spacing to be equal to 4 spaces, which is a standard convention for tab spacing
         self.folderNames.setTabStopDistance(
             QtGui.QFontMetricsF(self.folderNames.font()).horizontalAdvance(' ') * 4
         )
@@ -120,7 +117,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        #variables for createFolders
+        #Variables for createFolders
         self.currentDirectory = ""
         self.formattedInputList = []
         self.folderNameDict = {}
@@ -129,8 +126,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.folderNameCounterDict = {}
         self.preexistingDuplicatesCounterDict = {}
         self.finalNamesList = []
-
-    def openWindow(self, namecases):
+    def openCaseStyleWindow(self, namecases):
         caseStyleWindow = CaseStyleWindow(namecases)
         caseStyleWindow.exec_()
         return caseStyleWindow.selectedCase
@@ -168,15 +164,13 @@ class MainWindow(QtWidgets.QMainWindow):
                 folderNames = self.ui.folderNames.toPlainText()
                 fileContents.write(folderNames)
             fileContents.close()
-
     def createFolders(self):
-        #Getting the current directory.
         self.currentDirectory = self.ui.directoryTextbox.text()
         if self.currentDirectory == "":
             QtWidgets.QMessageBox.question(
                 self, 
                 'No source folder',
-                "Please provide a source folder",
+                "Please provide a source folder.",
                 QtWidgets.QMessageBox.Ok
             )
             return
@@ -184,44 +178,40 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.question(
                 self, 
                 'Folder does not exist',
-                "Please provide an existing source folder",
+                "Please provide an existing source folder.",
                 QtWidgets.QMessageBox.Ok
             )
             return
-        
-        #Collecting the strings from the input box, then format the strings.
+        #Collects the names from the plain-text edit box, then formats the names and adds them into the formattedInputList list.
         self.createFolders_step1_nameFormatting()
-
-        #Create two dictionaries (organised by the folder name in lowercase):
-            #folderNameDict, to store the folder names.
-            #folderNamecasesDict, to store the namecases (names which differ only by the letter casing used within them, for example "Apple" and "apple").    
+        #Fills two dictionaries (both organised by the folder name in lowercase):
+            #folderNameDict: used for storing the folder names.
+            #folderNamecasesDict: used for storing the namecases (names which differ only by the letter casing used within them, for example "Apple" and "apple").    
         self.createFolders_step2_namesAndNamecases()
-
-        #Create two dictionaries (organised by the folder name in lowercase):
-            #chosenNamecasesDict, to store the chosen namecases.
-            #folderNameCounterDict, to store the number of times a folder name appears from folderNameDict.
-        self.createFolders_step3_chosenAndNameCounts()
-
-        #Create a Counter dictionary to get the number of preexisting duplicates of a folder within the target directory. This is used for creating cumulative duplicate folders.
+        #Fills two dictionaries (both organised by the folder name in lowercase):
+            #chosenNamecasesDict: used for storing the chosen namecases.
+            #folderNameCounterDict: used for storing the number of times a folder name appears from folderNameDict.
+        self.createFolders_step3_chosenNamecasesAndNameCounts()
+        #Fills a Counter dictionary:
+            #preexistingDuplicatesCounterDict: used for getting the number of preexisting duplicates of a folder within the target directory. This is used for creating cumulative duplicate folders.
         self.createFolders_step4_preexistingDuplicateCounts()
-
-        #Create a list containing the final names for the folders (appending "(Copy X)" for duplicate names)
+        #Fills a list 
+            #finalNamesList: used for containing the final names for the folders. Duplicate name copies have "(Copy X)" (where X is a copy number) suffixed to their name that will appear in the target directory.
         self.createFolders_step5_finalNames()
-        
-        #Create the folders. If no duplicate folder are to be created but there is a folder copy with the same name or with only different casing and without the (Copy X) suffix, that first copy with have any content such as subfolders removed.
+        #Creates the folders.
         self.createFolders_step6_makeDirectories()
-
-        #Clear all global list and dictionary variables
+        #Empties all aforementioned global lists and dictionaries
         self.createFolders_step7_resetGlobalVariables()
-
     def createFolders_step1_nameFormatting(self):
         def folderFormattingAndReserveHandling(currentLine):
-            if currentLine == "/" or currentLine == "\\":
+            #This rejects extensionless files
+            if os.path.isfile(self.currentDirectory + "\\" + currentLine) == True:
                 return False
-            if currentLine[0] in ["/"] or currentLine[-1] in ["/"]:
-                currentLine = currentLine.strip("/")
-            if currentLine[0] in ["\\"] or currentLine[-1] in ["\\"]:
-                currentLine = currentLine.strip("\\")
+            if any(char in currentLine for char in reservedCharacters):
+                return False
+            currentLine = currentLine.strip("/\\")
+            if currentLine == "":
+                return False
             if any(char in currentLine for char in subfolderDividers):
                 currentLine = re.split("[/\\\\]+", currentLine)
             if type(currentLine) == list:
@@ -229,8 +219,6 @@ class MainWindow(QtWidgets.QMainWindow):
                     if currentLine[i][-1] == ".":
                         currentLine[i] = currentLine[i].rstrip(".")
                     if currentLine[i].upper() in reservedFileNames:
-                        return False
-                    if any(char in currentLine[i] for char in reservedCharacters):
                         return False
                 return currentLine
             else:
@@ -240,16 +228,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     currentLine = currentLine.rstrip(".")
                 if currentLine.upper() in reservedFileNames:
                     return False
-                if any(char in currentLine for char in reservedCharacters):
-                    return False
                 return currentLine
-        #print("STEP 1")
         despacedNamesList = [
             x.strip()
             for x in self.ui.folderNames.toPlainText().split("\n") 
             if x.strip()
         ]
-        #print("despacedNamesList", despacedNamesList)
         for i in range(len(despacedNamesList)):
             currentLine = folderFormattingAndReserveHandling(despacedNamesList[i])
             if currentLine == False:
@@ -257,7 +241,6 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 self.formattedInputList.append(currentLine)
     def createFolders_step2_namesAndNamecases(self):
-        #print("STEP 2")
         for item in self.formattedInputList:
             if type(item) == list:
                 rootFolder = item[0]
@@ -272,12 +255,11 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.folderNamecasesDict[item.lower()] = set()
                 self.folderNameDict[item.lower()].append(item)
                 self.folderNamecasesDict[item.lower()].add(item)
-    def createFolders_step3_chosenAndNameCounts(self):
-        #print("STEP 3")
+    def createFolders_step3_chosenNamecasesAndNameCounts(self):
         for key in self.folderNamecasesDict.keys():
             namecases = list(set(self.folderNamecasesDict[key]))
             if (len(namecases) > 1):
-                chosenNamecase = self.openWindow(namecases)
+                chosenNamecase = self.openCaseStyleWindow(namecases)
                 if chosenNamecase == "":
                     continue
                 for namecase in namecases:
@@ -293,10 +275,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 else:
                     case = self.chosenNamecasesDict[chosenNamecase.lower()]
             self.folderNameCounterDict[key] = len(self.folderNameDict[key])
-        #print("chosenNamecasesDict", self.chosenNamecasesDict)
-        #print("uniqueNamesCounterDict", self.folderNameCounterDict)
     def createFolders_step4_preexistingDuplicateCounts(self):
-        #print("STEP 4")
         preexistingDuplicatesList = []
         for item in os.listdir(self.currentDirectory):
             if item.lower() in self.chosenNamecasesDict.keys():
@@ -315,27 +294,19 @@ class MainWindow(QtWidgets.QMainWindow):
                         os.path.join(self.currentDirectory, item), 
                         os.path.join(self.currentDirectory, self.chosenNamecasesDict[strippedItem.lower()] + " " + parser[-1])
                     )
-        #print("files", os.listdir(self.currentDirectory))
         self.preexistingDuplicatesCounterDict = collections.Counter(preexistingDuplicatesList)
-        #print("preexistingDuplicatesList", preexistingDuplicatesList)
-        #print("preexistingDuplicatesCounterDict", self.preexistingDuplicatesCounterDict)
     def createFolders_step5_finalNames(self):
-        #print("STEP 5")
         for item in self.folderNameCounterDict.keys():
             if(
                 self.ui.duplicateFoldersCheckbox.isChecked() 
                 and self.folderNameCounterDict[item] > 0
             ):
-                #print("many", item)
                 if(self.chosenNamecasesDict[item] not in os.listdir(self.currentDirectory)):
                     if type(self.folderNameDict[item][0]) == list:
                         self.finalNamesList.append(self.folderNameDict[item][0])
-                        #print("\ta item", self.folderNameDict[item][0])
                     else:
                         self.finalNamesList.append(self.chosenNamecasesDict[item])
-                        #print("\tb item", self.chosenNamecasesDict[item])
                     for i in range(1, self.folderNameCounterDict[item]):
-                        #print("choice1", self.chosenNamecasesDict[item])
                         if type(self.folderNameDict[item][i]) == list:
                             newItem = self.chosenNamecasesDict[item] + " " + "(Copy " + str(i) + ")"
                             self.folderNameDict[item][i][0] = newItem
@@ -343,31 +314,22 @@ class MainWindow(QtWidgets.QMainWindow):
                             newItem = self.chosenNamecasesDict[item] + " " + "(Copy " + str(i) + ")"
                             self.folderNameDict[item][i] = newItem
                         self.finalNamesList.append(self.folderNameDict[item][i])
-                        #print("\titem", self.folderNameDict[item][i])
                 else:
                     for i in range(0, self.folderNameCounterDict[item]):
-                        #print("choice2", self.chosenNamecasesDict[item])
                         if type(self.folderNameDict[item][i]) == list:
-                            #print("\titem", self.folderNameDict[item][i])
-                            #print("\t\tnumber", (i + 1) + self.preexistingDuplicatesCounterDict[item])
                             newItem = self.chosenNamecasesDict[item] + " " + "(Copy " + str(i + self.preexistingDuplicatesCounterDict[item]) + ")"
-                            #print("\t\tnewItem", newItem)
                             self.folderNameDict[item][i][0] = newItem
-                            #print("\t\tresult", self.folderNameDict[item][i])
                         else:
-                            #print("\titem", self.folderNameDict[item][i])
-                            #print("\t\tnumber", (i + 1) + self.preexistingDuplicatesCounterDict[item])
                             newItem = self.chosenNamecasesDict[item] + " " + "(Copy " + str(i + self.preexistingDuplicatesCounterDict[item]) + ")"
-                            #print("\t\tnewItem", newItem)
                             self.folderNameDict[item][i] = newItem
-                            #print("\t\tresult", self.folderNameDict[item][i])
                         self.finalNamesList.append(self.folderNameDict[item][i])
             else:
-                #print("zero", self.folderNameDict[item][0])
-                self.finalNamesList.append(self.folderNameDict[item][0])
-        #print("finalNamesList", self.finalNamesList)
+                if type(self.folderNameDict[item][0]) == list:
+                    self.folderNameDict[item][0][0] = self.chosenNamecasesDict[item]
+                    self.finalNamesList.append(self.folderNameDict[item][0])
+                else:
+                    self.finalNamesList.append(self.chosenNamecasesDict[item])
     def createFolders_step6_makeDirectories(self):
-        #print("STEP 6")
         if not self.ui.duplicateFoldersCheckbox.isChecked():
             for name in self.finalNamesList:
                 if type(name) == list:
@@ -410,6 +372,9 @@ class Ui_CaseStyleWindow(object):
         CaseStyleWindow.setSizePolicy(sizePolicy)
         CaseStyleWindow.setMinimumSize(QtCore.QSize(300, 420))
         CaseStyleWindow.setMaximumSize(QtCore.QSize(300, 420))
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(os.path.join(basedir, 'images', "app_logo.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        CaseStyleWindow.setWindowIcon(icon)
         self.centralwidget = QtWidgets.QWidget(CaseStyleWindow)
         self.centralwidget.setGeometry(QtCore.QRect(0, 0, 300, 418))
         self.centralwidget.setObjectName("centralwidget")
@@ -458,13 +423,14 @@ class CaseStyleWindow(QtWidgets.QDialog):
             QtWidgets.QMessageBox.question(
                 self, 
                 'No Case Style Selected',
-                "Please select a case style. If you don't want any case, click 'Cancel'",
+                "Please select a case style. If you don't want any case, click 'Cancel'.",
                 QtWidgets.QMessageBox.Ok
             )
     def closeWithoutCaseStyle(self):
         self.selectedCase = ""
         QtWidgets.QDialog.close(self)
-    def closeEvent(self, event): #overridden method
+    #the closeEvent and keyPressEvent methods have been overridden
+    def closeEvent(self, event): 
         if self.isAccepted == True:
             event.accept()
         else:
@@ -475,6 +441,14 @@ class CaseStyleWindow(QtWidgets.QDialog):
             self.selectedCase = ""
             event.accept()
             QtWidgets.QDialog.close(self)
+        if event.key() in [QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter]:
+            #Note: Key_Return is the horizontal key above the right shift button, whereas Key_Enter is the vertical key to the right of the keypad numbers.
+            if self.selectedCase != "":
+                self.selectedCase = self.ui.listWidget.currentItem().text()
+                self.closeWithCaseStyle()
+            else:
+                self.selectedCase = ""
+                self.closeWithCaseStyle()
     
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

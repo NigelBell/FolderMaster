@@ -12,10 +12,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[
-        "distutils"
-
-    ],
+    excludes=[],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -46,40 +43,43 @@ exe = EXE(
     icon='images/app_logo.ico'
 )
 
+excluded_files = [
+    '_asyncio',
+    '_bz2',
+    '_ctypes',
+    '_decimal',
+    '_hashlib',
+    '_lzma',
+    '_multiprocessing',
+    '_overlapped',
+    '_queue',
+    '_ssl',
+    'd3dcompiler_47.dll',
+    'libcrypto-1_1.dll',
+    'libEGL.dll',
+    'libffi-7.dll',
+    'libGLESv2.dll',
+    'libssl-1_1.dll',
+    'MSVCP140.dll',
+    'MSVCP140_1.dll',
+    'opengl32sw.dll',
+    'pyexpat',
+    'Qt5DBus.dll',
+    'Qt5Network.dll',
+    'Qt5Qml.dll',
+    'Qt5QmlModels.dll',
+    'Qt5Quick.dll',
+    'Qt5Svg.dll',
+    'Qt5WebSockets.dll',
+    'unicodedata',
+    'VCRUNTIME140.dll',
+    'VCRUNTIME140_1.dll'
+]
+a.binaries = TOC([x for x in a.binaries if x[0] not in excluded_files])
+
 coll = COLLECT(
     exe,
-    a.binaries - TOC([
-        ('_asyncio', None, None),
-        ('_bz2', None, None),
-        ('_ctypes', None, None),
-        ('_decimal', None, None),
-        ('_hashlib', None, None),
-        ('_lzma', None, None),
-        ('_multiprocessing', None, None),
-        ('_overlapped', None, None),
-        ('_queue', None, None),
-        ('_ssl', None, None),
-        ('d3dcompiler_47.dll', None, None),
-        ('libcrypto-1_1.dll', None, None),
-        ('libEGL.dll', None, None), #CAN'T REMOVE
-        ('libffi-7.dll', None, None),
-        ('libGLESv2.dll', None, None), #CAN'T REMOVE
-        ('libssl-1_1.dll', None, None),
-        ('MSVCP140.dll', None, None), #CAN'T REMOVE
-        ('MSVCP140_1.dll', None, None), #CAN'T REMOVE
-        ('opengl32sw.dll', None, None),
-        ('pyexpat', None, None),
-        ('Qt5DBus.dll', None, None), #CAN'T REMOVE
-        ('Qt5Network.dll', None, None), #CAN'T REMOVE
-        ('Qt5Qml.dll', None, None), #CAN'T REMOVE
-        ('Qt5QmlModels.dll', None, None), #CAN'T REMOVE
-        ('Qt5Quick.dll', None, None), #CAN'T REMOVE
-        ('Qt5Svg.dll', None, None), #CAN'T REMOVE
-        ('Qt5WebSockets.dll', None, None), #CAN'T REMOVE
-        ('unicodedata', None, None),
-        ('VCRUNTIME140.dll', None, None), #CAN'T REMOVE
-        ('VCRUNTIME140_1.dll', None, None), #CAN'T REMOVE
-    ]),
+    a.binaries,
     a.zipfiles,
     a.datas, 
     strip=False,
