@@ -26,13 +26,42 @@
     * `FolderMasterInstallDir` is used in order to provide access to the RefreshEnv.cmd batch file.'
     * Note that due to the use of `setx` in order to create the user environment variables, folder names longer than 1024 characters will be truncated.
 * The `RefreshEnv.cmd` batch file is used in order to refresh the environment variables, which allows the name of the folder that was right clicked on to be passed into the program. It is a lightly modified version of the `RefreshEnv.cmd` batch file found in the repository for Chocolatey (https://github.com/chocolatey/choco). The only modification done to it is the removal of output messages to the command prompt.
-
+## Environment installation:
+1. 
+    ```
+    python -m venv venv
+    ```
+2. If not using bash:
+    ```
+    venv/Scripts/activate
+    ```
+    If using bash:
+    ```
+    source venv/Scripts/activate
+    ```
+3. If installing the known-to-work packages frozen in `requirements.txt`:
+    ```
+    pip install -r requirements.txt
+    ```
+    If installing the latest packages:
+    ```
+    pip install PyQt5 pyinstaller
+    ```
+## Running the scripts:
+* Main program:
+    ```
+    python FolderMaster.py
+    ```
+* Unit tests:
+    ```
+    python FolderMasterUnitTesting.py
+    ```
 ## Compilation instructions
 ### For Windows
 1. Run the following command:
-```
-pyinstaller FolderMaster.spec
-```
+    ```
+    pyinstaller FolderMaster.spec
+    ```
 2. Access the compiled program within the `dist\FolderMaster` folder.
 3. Open up the NSIS Menu, and click on "Compile NSI scripts"
 4. Drag the .nsi file into the window to start compiling the installer.
@@ -40,25 +69,25 @@ pyinstaller FolderMaster.spec
 
 ## (Optional) Compiling the `.ui` files into `.py` files
 1. Change the directory to `ui_files`
-```
-cd ui_files
-```
+    ```
+    cd ui_files
+    ```
 2. Run the following commands:
-```
-pyuic5 FolderMaster.ui > FolderMaster.py
-pyuic5 CaseStyleWindow.ui > CaseStyleWindow.py
-```
+    ```
+    pyuic5 FolderMaster.ui > FolderMaster.py
+    pyuic5 CaseStyleWindow.ui > CaseStyleWindow.py
+    ```
 
 ## Proposed changes for future updates
 * Support for multiple folders being created in multiple layers, represented via tabs (which are currently treated as whitespace). For example, the following input should create folders `b` and `c` inside `a`, and folders `f` and `g` inside the `e` folder of `d/e`:
-```
-a
-    b
-    c
-d/e
-    f
-    g
-```
+    ```
+    a
+        b
+        c
+    d/e
+        f
+        g
+    ```
 * The addition of several options, which will appear in "Settings/Preferences" ("Settings" is a menu name, "Preferences" is a menu item):
     * An option to customize the `(Copy X)` suffix (by default, use the `(Copy X)` suffix).
     * An option to add line numbers to the plain-text edit box (by default, have this enabled).
@@ -93,3 +122,6 @@ d/e
 * v8.5 (07/06/22) - refined code, unit tests need to be fixed
 * v9 (19/06/22) - close to completion
 * v10 (27/06/22) - first release version. Fixed a crash that occurs with certain choices when not creating cumulative duplicates, and a crash that occurs when creating a folder in the same directory as an extensionless file with the same name. Provided some more basic tests along with some extra names in a few of the testcases. Finished creating the NSIS installer script. Provided a copy of the RefreshEnv batch file from Chocolatey's source code.
+### (rel) Release versions 
+* 1.0 - (27/06/22) see (dev) v10
+* 1.1 - (13/07/23) provided python virtual environment, `requirements.txt` and `.gitignore`
