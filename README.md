@@ -39,11 +39,7 @@
     ```
     source venv/Scripts/activate
     ```
-3. If installing the known-to-work packages frozen in `requirements.txt`:
-    ```
-    pip install -r requirements.txt
-    ```
-    If installing the latest packages:
+3. Install the latest packages:
     ```
     pip install PyQt5 pyinstaller
     ```
