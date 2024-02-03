@@ -1,4 +1,5 @@
 # FolderMaster
+![FolderMaster Project Image](/_readme_images/FolderMaster.png "FolderMaster Project Image")
 ## Program description and features
 * FolderMaster is a productivity software program that allows users to create several folders in one whole batch. This is done by obtaining the folder names (either by typing them into a plain-text edit box and/or loading them in from a text file) and then clicking the 'Create Folders' button.
 * Folder names inside said plain-text edit box can be saved to a text file.
