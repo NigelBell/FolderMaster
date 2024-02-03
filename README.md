@@ -27,22 +27,62 @@
     * `FolderMasterInstallDir` is used in order to provide access to the RefreshEnv.cmd batch file.'
     * Note that due to the use of `setx` in order to create the user environment variables, folder names longer than 1024 characters will be truncated.
 * The `RefreshEnv.cmd` batch file is used in order to refresh the environment variables, which allows the name of the folder that was right clicked on to be passed into the program. It is a lightly modified version of the `RefreshEnv.cmd` batch file found in the repository for Chocolatey (https://github.com/chocolatey/choco). The only modification done to it is the removal of output messages to the command prompt.
-## Environment installation:
+
+## Commands (Shell)
+### Virtual environment installation:
+* Windows (cmd, ps):
+    ```
+    sh/install.cmd
+    ```
+* Mac/Linux or Windows with MinGW (bash, Zsh):
+    ```
+    sh sh/install.sh
+    ```
+## Running the scripts:
+* Windows (cmd, ps):
+    * Main program:
+        ```
+        sh/run.cmd dev
+        ```
+    * Unit tests:
+        ```
+        sh/run.cmd test
+        ```
+    * Test coverage:
+        ```
+        sh/run.cmd coverage
+* Mac/Linux or Windows with MinGW (bash, Zsh):
+    * Main program:
+        ```
+        sh sh/run.sh dev
+        ```
+    * Unit tests:
+        ```
+        sh sh/run.sh test
+        ```
+    * Test coverage:
+        ```
+        sh sh/run.sh coverage
+        ```
+
+## Commands (Manual) 
+### Virtual environment installation:
 1. 
     ```
     python -m venv venv
     ```
-2. If not using bash:
-    ```
-    venv/Scripts/activate
-    ```
-    If using bash:
+2.  If using bash:
     ```
     source venv/Scripts/activate
     ```
-3. Install the latest packages:
+
+    If not using bash:
     ```
-    pip install PyQt5 pyinstaller
+    venv/Scripts/activate
+    ```
+3. 
+    ```
+    pip install PyQt5 pyinstaller coverage
     ```
 ## Running the scripts:
 * Main program:
@@ -53,6 +93,11 @@
     ```
     python FolderMasterUnitTesting.py
     ```
+* Test coverage report:
+    ```
+    python FolderMasterUnitTesting.py
+    ```
+
 ## Compilation instructions
 ### For Windows
 1. Run the following command:
@@ -122,3 +167,7 @@
 ### (rel) Release versions 
 * 1.0 - (27/06/22) see (dev) v10
 * 1.1 - (13/07/23) provided python virtual environment, `requirements.txt` and `.gitignore`
+* 1.2 - (04/02/24) added testing coverage with `Coverage.py`, and shell scripts for simplified commands.
+    * Testing coverage: 
+        * Entire program: 90%
+        * Main codebase: 82%
