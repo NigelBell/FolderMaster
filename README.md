@@ -171,3 +171,4 @@
     * Testing coverage: 
         * Entire program: 90%
         * Main codebase: 82%
+* 1.2.1 (09/02/24) removed 'cumulative' from name to reduce confusion 
