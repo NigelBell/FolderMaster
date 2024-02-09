@@ -103,7 +103,7 @@ class Ui_MainWindow(object):
         self.createButton.setText(_translate("MainWindow", "Create Folders"))
         self.directoryLabel.setText(_translate("MainWindow", "Directory:"))
         self.folderNamesLabel.setText(_translate("MainWindow", "Folder Names:"))
-        self.duplicateFoldersCheckbox.setText(_translate("MainWindow", "Create cumulative duplicate folders"))
+        self.duplicateFoldersCheckbox.setText(_translate("MainWindow", "Create duplicate folders"))
         self.menuFile.setTitle(_translate("MainWindow", "File"))
         self.actionOpenNameListFile.setText(_translate("MainWindow", "Open name list file"))
         self.actionOpenNameListFile.setShortcut(_translate("MainWindow", "Ctrl+O"))
@@ -193,7 +193,7 @@ class MainWindow(QtWidgets.QMainWindow):
             #folderNameCounterDict: used for storing the number of times a folder name appears from folderNameDict.
         self.createFolders_step3_chosenNamecasesAndNameCounts()
         #Fills a Counter dictionary:
-            #preexistingDuplicatesCounterDict: used for getting the number of preexisting duplicates of a folder within the target directory. This is used for creating cumulative duplicate folders.
+            #preexistingDuplicatesCounterDict: used for getting the number of preexisting duplicates of a folder within the target directory. This is used for creating duplicate folders.
         self.createFolders_step4_preexistingDuplicateCounts()
         #Fills a list 
             #finalNamesList: used for containing the final names for the folders. Duplicate name copies have "(Copy X)" (where X is a copy number) suffixed to their name that will appear in the target directory.
